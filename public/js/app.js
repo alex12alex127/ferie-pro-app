@@ -89,7 +89,7 @@ async function initRequest() {
 
   async function loadMyRequests() {
     const data = await API.get('/api/requests') || [];
-    list.innerHTML = data.length ? data.map(r => `<tr><td><b>${esc(r.inizio)}</b><br><small>→ ${esc(r.fine)}</small></td><td>${esc(r.tipo)}</td><td>${r.giorni}g</td><td><span class="badge ${badge(r.stato)}">${esc(r.stato)}</span></td><td class="hide-mobile">${r.approved_by_name ? esc(r.approved_by_name) : '-'}</td></tr>`).join('') : '<tr><td colspan="5">Nessuna richiesta.</td></tr>';
+    list.innerHTML = data.length ? data.map(r => `<tr><td><b>${esc(r.inizio)}</b><br><small>→ ${esc(r.fine)}</small></td><td>${esc(r.tipo)}</td><td>${r.giorni}g</td><td><span class="badge ${badge(r.stato)}">${esc(r.stato)}</span></td></tr>`).join('') : '<tr><td colspan="4">Nessuna richiesta.</td></tr>';
   }
   loadMyRequests();
 }

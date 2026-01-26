@@ -3,9 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nuova Richiesta - Ferie Pro</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <title>Richiesta Ferie</title>
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
@@ -29,7 +27,7 @@
         <form id="request-form">
           <div class="row row-2">
             <div class="form-group">
-              <label>Nome e Cognome</label>
+              <label>Nome</label>
               <input type="text" name="nome" required>
             </div>
             <div class="form-group">
@@ -41,11 +39,11 @@
           <div class="row row-2">
             <div class="form-group">
               <label>Reparto</label>
-              <input type="text" name="reparto" placeholder="es. IT, Produzione">
+              <input type="text" name="reparto" placeholder="Opzionale">
             </div>
             <div class="form-group">
               <label>Responsabile</label>
-              <input type="text" name="responsabile" placeholder="Nome responsabile">
+              <input type="text" name="responsabile" placeholder="Opzionale">
             </div>
           </div>
           
@@ -62,7 +60,7 @@
           
           <div id="giorni-calc" class="giorni-calc"></div>
           
-          <div class="row row-3">
+          <div class="row row-2">
             <div class="form-group">
               <label>Tipo</label>
               <select name="tipo">
@@ -70,7 +68,6 @@
                 <option value="Permesso">Permesso</option>
                 <option value="Malattia">Malattia</option>
                 <option value="Smart Working">Smart Working</option>
-                <option value="Congedo">Congedo</option>
                 <option value="Altro">Altro</option>
               </select>
             </div>
@@ -79,19 +76,16 @@
               <select name="urgenza">
                 <option value="Normale">Normale</option>
                 <option value="Alta">Alta</option>
-                <option value="Urgente">Urgente</option>
               </select>
-            </div>
-            <div class="form-group">
-              <label>Telefono</label>
-              <input type="tel" name="telefono" placeholder="+39...">
             </div>
           </div>
           
           <div class="form-group">
-            <label>Note</label>
-            <textarea name="motivo" rows="2" placeholder="Motivazione o note aggiuntive..."></textarea>
+            <label>Note (opzionale)</label>
+            <textarea name="motivo" rows="2" placeholder="Motivazione..."></textarea>
           </div>
+          
+          <input type="hidden" name="telefono" value="">
           
           <button type="submit">Invia Richiesta</button>
         </form>
@@ -102,13 +96,7 @@
         <div class="table-wrap">
           <table>
             <thead>
-              <tr>
-                <th>Periodo</th>
-                <th>Tipo</th>
-                <th>Giorni</th>
-                <th>Stato</th>
-                <th class="hide-mobile">Approvato da</th>
-              </tr>
+              <tr><th>Periodo</th><th>Tipo</th><th>Giorni</th><th>Stato</th></tr>
             </thead>
             <tbody id="my-requests"></tbody>
           </table>

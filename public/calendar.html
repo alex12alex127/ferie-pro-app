@@ -3,9 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Calendario - Ferie Pro</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <title>Calendario</title>
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
@@ -23,13 +21,13 @@
   <main class="container">
     <div class="card">
       <div class="calendar-header">
-        <button class="btn-ghost" onclick="prevMonth()">← Mese</button>
+        <button class="btn-ghost btn-sm" onclick="prevMonth()">← Precedente</button>
         <h2 id="month-label"></h2>
-        <button class="btn-ghost" onclick="nextMonth()">Mese →</button>
+        <button class="btn-ghost btn-sm" onclick="nextMonth()">Successivo →</button>
       </div>
       <div id="calendar-grid" class="calendar-grid"></div>
       <div class="calendar-legend">
-        <span><span class="legend-dot approved"></span> Ferie approvate</span>
+        <span class="legend-dot"></span> Ferie approvate
       </div>
     </div>
   </main>

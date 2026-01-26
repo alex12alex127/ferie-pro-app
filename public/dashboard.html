@@ -3,9 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - Ferie Pro</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <title>Dashboard</title>
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
@@ -29,8 +27,8 @@
       <div class="kpi-item"><div class="value" id="kpi-month">0</div><div class="label">Questo Mese</div></div>
     </div>
     
-    <div class="card" style="margin-top:24px">
-      <h2>Richieste</h2>
+    <div class="card" style="margin-top:20px">
+      <h2>Gestione Richieste</h2>
       
       <div class="filters">
         <div class="form-group">
@@ -57,22 +55,15 @@
       </div>
       
       <div class="toolbar">
-        <button id="btn-refresh" class="btn-secondary">Aggiorna</button>
-        <button class="btn-ghost" onclick="exportData('csv')">📥 Export CSV</button>
-        <button class="btn-ghost" onclick="exportData('json')">📥 Export JSON</button>
+        <button id="btn-refresh" class="btn-secondary btn-sm">Aggiorna</button>
+        <button class="btn-ghost btn-sm" onclick="exportData('csv')">📥 CSV</button>
+        <button class="btn-ghost btn-sm" onclick="exportData('json')">📥 JSON</button>
       </div>
       
       <div class="table-wrap">
         <table>
           <thead>
-            <tr>
-              <th>Dipendente</th>
-              <th class="hide-mobile">Reparto</th>
-              <th>Periodo</th>
-              <th>Giorni</th>
-              <th>Stato</th>
-              <th>Azioni</th>
-            </tr>
+            <tr><th>Dipendente</th><th class="hide-mobile">Reparto</th><th>Periodo</th><th>Giorni</th><th>Stato</th><th>Azioni</th></tr>
           </thead>
           <tbody id="requests-list"></tbody>
         </table>
