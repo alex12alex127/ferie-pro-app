@@ -7,30 +7,51 @@
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-  <header class="topbar"><div class="container"><h1>Ferie Pro</h1><div class="user-info"><nav id="main-nav" class="nav"></nav><span id="user-info"></span><button class="btn-logout" onclick="Auth.logout()">Esci</button></div></div></header>
-  <main class="container">
-    <div class="grid grid-2">
-      <div class="card">
-        <h2>Nuova Richiesta</h2>
-        <div id="alert" class="alert hidden"></div>
-        <form id="form">
-          <div class="form-group"><label>Cantiere</label><select name="cantiere_id"><option value="">Nessuno</option></select></div>
-          <div class="form-group"><label>Materiale Richiesto</label><textarea name="materiale" rows="3" required placeholder="Descrivi il materiale necessario..."></textarea></div>
-          <div class="row row-2">
-            <div class="form-group"><label>Quantità</label><input type="text" name="quantita" placeholder="Es: 10 metri, 5 pezzi..."></div>
-            <div class="form-group"><label>Urgenza</label><select name="urgenza"><option>Normale</option><option>Alta</option><option>Urgente</option></select></div>
-          </div>
-          <div class="form-group"><label>Note</label><textarea name="note" rows="2"></textarea></div>
-          <button type="submit">Invia Richiesta</button>
-        </form>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h1>⚡ Ferie Pro</h1>
+        <small>Gestione Aziendale</small>
       </div>
-      <div class="card">
+      <nav class="sidebar-nav" id="main-nav"></nav>
+      <div class="sidebar-user">
+        <div class="user-name" id="user-name"></div>
+        <div class="user-role" id="user-role"></div>
+        <button class="btn-logout" onclick="Auth.logout()">Esci</button>
+      </div>
+    </aside>
+    <div class="sidebar-overlay" id="overlay" onclick="toggleMenu()"></div>
+    <main class="main-content">
+      <header class="topbar">
+        <button class="menu-toggle" onclick="toggleMenu()">☰</button>
         <h2>Richieste Materiale</h2>
-        <div class="form-group"><select id="filter-stato"><option value="">Tutti</option><option>In attesa</option><option>Approvata</option><option>Consegnato</option><option>Rifiutata</option></select></div>
-        <div class="table-wrap"><table><thead><tr><th>Materiale</th><th class="hide-mobile">Cantiere</th><th>Stato</th><th></th></tr></thead><tbody id="list"></tbody></table></div>
+        <div></div>
+      </header>
+      <div class="container">
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>📦 Nuova Richiesta</h3>
+            <div id="alert" class="alert hidden"></div>
+            <form id="form">
+              <div class="form-group"><label>Cantiere</label><select name="cantiere_id"><option value="">Nessuno</option></select></div>
+              <div class="form-group"><label>Materiale Richiesto</label><textarea name="materiale" rows="3" required placeholder="Descrivi il materiale..."></textarea></div>
+              <div class="row row-2">
+                <div class="form-group"><label>Quantità</label><input type="text" name="quantita" placeholder="Es: 10 metri..."></div>
+                <div class="form-group"><label>Urgenza</label><select name="urgenza"><option>Normale</option><option>Alta</option><option>Urgente</option></select></div>
+              </div>
+              <div class="form-group"><label>Note</label><textarea name="note" rows="2"></textarea></div>
+              <button type="submit">Invia Richiesta</button>
+            </form>
+          </div>
+          <div class="card">
+            <h3>📋 Elenco Richieste</h3>
+            <div class="form-group"><select id="filter-stato"><option value="">Tutti</option><option>In attesa</option><option>Approvata</option><option>Consegnato</option><option>Rifiutata</option></select></div>
+            <div class="table-wrap"><table><thead><tr><th>Materiale</th><th class="hide-mobile">Cantiere</th><th>Stato</th><th></th></tr></thead><tbody id="list"></tbody></table></div>
+          </div>
+        </div>
       </div>
-    </div>
-  </main>
+    </main>
+  </div>
   <script src="/js/auth.js"></script>
   <script src="/js/app.js"></script>
   <script>initMateriale();</script>

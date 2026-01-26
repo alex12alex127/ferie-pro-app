@@ -19,28 +19,59 @@ const fmtDate = d => d ? new Date(d).toLocaleDateString('it-IT') : '-';
 const isExpiring = d => { if (!d) return false; const diff = (new Date(d) - new Date()) / (1000 * 60 * 60 * 24); return diff < 30 && diff > 0; };
 const isExpired = d => d && new Date(d) < new Date();
 
+// Toggle mobile menu
+function toggleMenu() {
+  $('#sidebar')?.classList.toggle('open');
+  $('#overlay')?.classList.toggle('open');
+}
+
 // NAV
 function renderNav(active) {
   const nav = $('#main-nav'), user = Auth.getUser();
   if (!nav || !user) return;
   const isM = ['manager', 'admin'].includes(user.role), isA = user.role === 'admin';
-  const items = [
-    { k: 'request', l: 'Ferie', h: '/request.html' },
-    { k: 'timbrature', l: 'Presenze', h: '/timbrature.html' },
-    { k: 'rapportini', l: 'Rapportini', h: '/rapportini.html' },
-    { k: 'materiale', l: 'Materiale', h: '/materiale.html' },
-    { k: 'cantieri', l: 'Cantieri', h: '/cantieri.html', m: true },
-    { k: 'scadenze', l: 'Scadenze', h: '/scadenze.html', m: true },
-    { k: 'attrezzature', l: 'Attrezzature', h: '/attrezzature.html', m: true },
-    { k: 'veicoli', l: 'Veicoli', h: '/veicoli.html', m: true },
-    { k: 'dashboard', l: 'Dashboard', h: '/dashboard.html', m: true },
-    { k: 'avvisi', l: 'Avvisi', h: '/avvisi.html' },
-    { k: 'admin', l: 'Admin', h: '/admin.html', a: true },
-    { k: 'profile', l: 'Profilo', h: '/profile.html' }
+  
+  const sections = [
+    { title: 'Principale', items: [
+      { k: 'request', l: 'Ferie', h: '/request.html', i: '🏖️' },
+      { k: 'timbrature', l: 'Presenze', h: '/timbrature.html', i: '⏰' },
+      { k: 'rapportini', l: 'Rapportini', h: '/rapportini.html', i: '📝' },
+      { k: 'calendar', l: 'Calendario', h: '/calendar.html', i: '📅' },
+    ]},
+    { title: 'Operativo', items: [
+      { k: 'cantieri', l: 'Cantieri', h: '/cantieri.html', i: '🏗️', m: true },
+      { k: 'materiale', l: 'Materiale', h: '/materiale.html', i: '📦' },
+      { k: 'attrezzature', l: 'Attrezzature', h: '/attrezzature.html', i: '🔧', m: true },
+      { k: 'veicoli', l: 'Veicoli', h: '/veicoli.html', i: '🚐', m: true },
+    ]},
+    { title: 'Gestione', items: [
+      { k: 'scadenze', l: 'Scadenze', h: '/scadenze.html', i: '📋', m: true },
+      { k: 'avvisi', l: 'Avvisi', h: '/avvisi.html', i: '📢' },
+      { k: 'dashboard', l: 'Dashboard', h: '/dashboard.html', i: '📊', m: true },
+      { k: 'admin', l: 'Admin', h: '/admin.html', i: '⚙️', a: true },
+    ]},
+    { title: 'Account', items: [
+      { k: 'profile', l: 'Il Mio Profilo', h: '/profile.html', i: '👤' },
+    ]}
   ];
-  nav.innerHTML = items.filter(i => (!i.m && !i.a) || (i.m && isM) || (i.a && isA)).map(i => `<a href="${i.h}" class="${i.k === active ? 'active' : ''}">${i.l}</a>`).join('');
-  const ui = $('#user-info');
-  if (ui) ui.innerHTML = `${esc(user.name)} <small>(${user.role})</small>`;
+  
+  let html = '';
+  sections.forEach(sec => {
+    const visibleItems = sec.items.filter(i => (!i.m && !i.a) || (i.m && isM) || (i.a && isA));
+    if (visibleItems.length) {
+      html += `<div class="nav-section"><div class="nav-section-title">${sec.title}</div>`;
+      visibleItems.forEach(i => {
+        html += `<a href="${i.h}" class="${i.k === active ? 'active' : ''}" onclick="toggleMenu()"><span class="icon">${i.i}</span>${i.l}</a>`;
+      });
+      html += '</div>';
+    }
+  });
+  nav.innerHTML = html;
+  
+  // User info in sidebar
+  const userName = $('#user-name'), userRole = $('#user-role');
+  if (userName) userName.textContent = user.name;
+  if (userRole) userRole.textContent = user.role === 'admin' ? 'Amministratore' : user.role === 'manager' ? 'Responsabile' : 'Dipendente';
 }
 
 // LOGIN

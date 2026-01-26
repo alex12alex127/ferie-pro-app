@@ -7,31 +7,52 @@
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-  <header class="topbar"><div class="container"><h1>Ferie Pro</h1><div class="user-info"><nav id="main-nav" class="nav"></nav><span id="user-info"></span><button class="btn-logout" onclick="Auth.logout()">Esci</button></div></div></header>
-  <main class="container">
-    <div class="grid grid-2">
-      <div class="card">
-        <h2>Nuovo Rapportino</h2>
-        <div id="alert" class="alert hidden"></div>
-        <form id="form">
-          <div class="row row-2">
-            <div class="form-group"><label>Cantiere</label><select name="cantiere_id" required><option value="">Seleziona...</option></select></div>
-            <div class="form-group"><label>Data</label><input type="date" name="data" required></div>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h1>⚡ Ferie Pro</h1>
+        <small>Gestione Aziendale</small>
+      </div>
+      <nav class="sidebar-nav" id="main-nav"></nav>
+      <div class="sidebar-user">
+        <div class="user-name" id="user-name"></div>
+        <div class="user-role" id="user-role"></div>
+        <button class="btn-logout" onclick="Auth.logout()">Esci</button>
+      </div>
+    </aside>
+    <div class="sidebar-overlay" id="overlay" onclick="toggleMenu()"></div>
+    <main class="main-content">
+      <header class="topbar">
+        <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+        <h2>Rapportini Lavoro</h2>
+        <div></div>
+      </header>
+      <div class="container">
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>📝 Nuovo Rapportino</h3>
+            <div id="alert" class="alert hidden"></div>
+            <form id="form">
+              <div class="row row-2">
+                <div class="form-group"><label>Cantiere</label><select name="cantiere_id" required><option value="">Seleziona...</option></select></div>
+                <div class="form-group"><label>Data</label><input type="date" name="data" required></div>
+              </div>
+              <div class="form-group"><label>Ore Lavorate</label><input type="number" name="ore" step="0.5" min="0.5" max="16" required></div>
+              <div class="form-group"><label>Descrizione Lavori</label><textarea name="descrizione" rows="2" required></textarea></div>
+              <div class="form-group"><label>Materiali Utilizzati</label><textarea name="materiali" rows="2" placeholder="Opzionale..."></textarea></div>
+              <div class="form-group"><label>Problemi Riscontrati</label><textarea name="problemi" rows="2" placeholder="Opzionale..."></textarea></div>
+              <button type="submit">Invia Rapportino</button>
+            </form>
           </div>
-          <div class="form-group"><label>Ore Lavorate</label><input type="number" name="ore" step="0.5" min="0.5" max="16" required></div>
-          <div class="form-group"><label>Descrizione Lavori</label><textarea name="descrizione" rows="2" required></textarea></div>
-          <div class="form-group"><label>Materiali Utilizzati</label><textarea name="materiali" rows="2" placeholder="Opzionale..."></textarea></div>
-          <div class="form-group"><label>Problemi Riscontrati</label><textarea name="problemi" rows="2" placeholder="Opzionale..."></textarea></div>
-          <button type="submit">Invia Rapportino</button>
-        </form>
+          <div class="card">
+            <h3>📋 Storico Rapportini</h3>
+            <div class="form-group"><input type="text" id="filter" placeholder="Cerca..."></div>
+            <div class="table-wrap"><table><thead><tr><th>Data</th><th>Cantiere</th><th>Ore</th><th class="hide-mobile">Tecnico</th></tr></thead><tbody id="list"></tbody></table></div>
+          </div>
+        </div>
       </div>
-      <div class="card">
-        <h2>Storico Rapportini</h2>
-        <div class="form-group"><input type="text" id="filter" placeholder="Cerca..."></div>
-        <div class="table-wrap"><table><thead><tr><th>Data</th><th>Cantiere</th><th>Ore</th><th class="hide-mobile">Tecnico</th></tr></thead><tbody id="list"></tbody></table></div>
-      </div>
-    </div>
-  </main>
+    </main>
+  </div>
   <script src="/js/auth.js"></script>
   <script src="/js/app.js"></script>
   <script>initRapportini();</script>

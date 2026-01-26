@@ -7,70 +7,52 @@
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="container">
-      <h1>Ferie Pro</h1>
-      <div class="user-info">
-        <nav id="main-nav" class="nav"></nav>
-        <span id="user-info"></span>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h1>⚡ Ferie Pro</h1>
+        <small>Gestione Aziendale</small>
+      </div>
+      <nav class="sidebar-nav" id="main-nav"></nav>
+      <div class="sidebar-user">
+        <div class="user-name" id="user-name"></div>
+        <div class="user-role" id="user-role"></div>
         <button class="btn-logout" onclick="Auth.logout()">Esci</button>
       </div>
-    </div>
-  </header>
-  
-  <main class="container">
-    <div class="kpi">
-      <div class="kpi-item"><div class="value" id="kpi-total">0</div><div class="label">Totale</div></div>
-      <div class="kpi-item"><div class="value" id="kpi-pending">0</div><div class="label">In Attesa</div></div>
-      <div class="kpi-item"><div class="value" id="kpi-approved">0</div><div class="label">Approvate</div></div>
-      <div class="kpi-item"><div class="value" id="kpi-rejected">0</div><div class="label">Rifiutate</div></div>
-      <div class="kpi-item"><div class="value" id="kpi-month">0</div><div class="label">Questo Mese</div></div>
-    </div>
-    
-    <div class="card" style="margin-top:20px">
-      <h2>Gestione Richieste</h2>
-      
-      <div class="filters">
-        <div class="form-group">
-          <label>Cerca</label>
-          <input type="text" id="filter-text" placeholder="Nome, email...">
+    </aside>
+    <div class="sidebar-overlay" id="overlay" onclick="toggleMenu()"></div>
+    <main class="main-content">
+      <header class="topbar">
+        <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+        <h2>Dashboard</h2>
+        <div></div>
+      </header>
+      <div class="container">
+        <div class="kpi">
+          <div class="kpi-item"><div class="value" id="kpi-total">0</div><div class="label">Totale</div></div>
+          <div class="kpi-item"><div class="value" id="kpi-pending">0</div><div class="label">In Attesa</div></div>
+          <div class="kpi-item"><div class="value" id="kpi-approved">0</div><div class="label">Approvate</div></div>
+          <div class="kpi-item"><div class="value" id="kpi-rejected">0</div><div class="label">Rifiutate</div></div>
+          <div class="kpi-item"><div class="value" id="kpi-month">0</div><div class="label">Questo Mese</div></div>
         </div>
-        <div class="form-group">
-          <label>Stato</label>
-          <select id="filter-status">
-            <option value="">Tutti</option>
-            <option value="In attesa">In attesa</option>
-            <option value="Approvata">Approvata</option>
-            <option value="Rifiutata">Rifiutata</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Da</label>
-          <input type="date" id="filter-from">
-        </div>
-        <div class="form-group">
-          <label>A</label>
-          <input type="date" id="filter-to">
+        <div class="card">
+          <h3>📊 Gestione Richieste</h3>
+          <div class="filters">
+            <div class="form-group"><label>Cerca</label><input type="text" id="filter-text" placeholder="Nome, email..."></div>
+            <div class="form-group"><label>Stato</label><select id="filter-status"><option value="">Tutti</option><option>In attesa</option><option>Approvata</option><option>Rifiutata</option></select></div>
+            <div class="form-group"><label>Da</label><input type="date" id="filter-from"></div>
+            <div class="form-group"><label>A</label><input type="date" id="filter-to"></div>
+          </div>
+          <div class="toolbar">
+            <button id="btn-refresh" class="btn-secondary btn-sm">🔄 Aggiorna</button>
+            <button class="btn-ghost btn-sm" onclick="exportData('csv')">📥 CSV</button>
+            <button class="btn-ghost btn-sm" onclick="exportData('json')">📥 JSON</button>
+          </div>
+          <div class="table-wrap"><table><thead><tr><th>Dipendente</th><th class="hide-mobile">Reparto</th><th>Periodo</th><th>Giorni</th><th>Stato</th><th>Azioni</th></tr></thead><tbody id="requests-list"></tbody></table></div>
         </div>
       </div>
-      
-      <div class="toolbar">
-        <button id="btn-refresh" class="btn-secondary btn-sm">Aggiorna</button>
-        <button class="btn-ghost btn-sm" onclick="exportData('csv')">📥 CSV</button>
-        <button class="btn-ghost btn-sm" onclick="exportData('json')">📥 JSON</button>
-      </div>
-      
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Dipendente</th><th class="hide-mobile">Reparto</th><th>Periodo</th><th>Giorni</th><th>Stato</th><th>Azioni</th></tr>
-          </thead>
-          <tbody id="requests-list"></tbody>
-        </table>
-      </div>
-    </div>
-  </main>
-  
+    </main>
+  </div>
   <script src="/js/auth.js"></script>
   <script src="/js/app.js"></script>
   <script>initDashboard();</script>
