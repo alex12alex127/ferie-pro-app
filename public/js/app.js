@@ -146,11 +146,11 @@ async function initRequest() {
     }
     listEl.innerHTML = data.map(r => `
       <tr>
-        <td>${escapeHtml(r.inizio)} → ${escapeHtml(r.fine)}</td>
+        <td><strong>${escapeHtml(r.inizio)}</strong><br><small>→ ${escapeHtml(r.fine)}</small></td>
         <td>${escapeHtml(r.tipo)}</td>
-        <td>${escapeHtml(r.urgenza)}</td>
+        <td class="hide-mobile">${escapeHtml(r.urgenza)}</td>
         <td><span class="badge ${badgeClass(r.stato)}">${escapeHtml(r.stato)}</span></td>
-        <td>${escapeHtml(r.created_at?.split('T')[0] || '')}</td>
+        <td class="hide-mobile">${escapeHtml(r.created_at?.split('T')[0] || '')}</td>
       </tr>
     `).join('');
   }
@@ -208,13 +208,13 @@ async function initDashboard() {
     listEl.innerHTML = filtered.map(r => `
       <tr>
         <td><strong>${escapeHtml(r.nome)}</strong><br><small style="color:var(--text-muted)">${escapeHtml(r.email)}</small></td>
-        <td>${escapeHtml(r.reparto || '-')}</td>
-        <td>${escapeHtml(r.inizio)} → ${escapeHtml(r.fine)}</td>
-        <td>${escapeHtml(r.tipo)}</td>
+        <td class="hide-mobile">${escapeHtml(r.reparto || '-')}</td>
+        <td>${escapeHtml(r.inizio)}<br><small>→ ${escapeHtml(r.fine)}</small></td>
+        <td class="hide-mobile">${escapeHtml(r.tipo)}</td>
         <td><span class="badge ${badgeClass(r.stato)}">${escapeHtml(r.stato)}</span></td>
-        <td style="white-space:nowrap">
-          <button class="btn-sm btn-secondary" onclick="updateStatus(${r.id}, 'Approvata')">✓ Approva</button>
-          <button class="btn-sm btn-ghost" onclick="updateStatus(${r.id}, 'Rifiutata')">✗ Rifiuta</button>
+        <td>
+          <button class="btn-sm btn-secondary" onclick="updateStatus(${r.id}, 'Approvata')">✓</button>
+          <button class="btn-sm btn-ghost" onclick="updateStatus(${r.id}, 'Rifiutata')">✗</button>
         </td>
       </tr>
     `).join('');
