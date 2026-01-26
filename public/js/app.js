@@ -54,7 +54,7 @@ function renderUserInfo() {
   const el = document.getElementById('user-info');
   const user = Auth.getUser();
   if (el && user) {
-    el.innerHTML = `${escapeHtml(user.name)} <span style="color:var(--muted)">(${user.role})</span>`;
+    el.innerHTML = `${escapeHtml(user.name)} <span style="color:var(--text-muted)">(${user.role})</span>`;
   }
 }
 
@@ -207,14 +207,14 @@ async function initDashboard() {
     
     listEl.innerHTML = filtered.map(r => `
       <tr>
-        <td><strong>${escapeHtml(r.nome)}</strong><br><small style="color:var(--muted)">${escapeHtml(r.email)}</small></td>
+        <td><strong>${escapeHtml(r.nome)}</strong><br><small style="color:var(--text-muted)">${escapeHtml(r.email)}</small></td>
         <td>${escapeHtml(r.reparto || '-')}</td>
         <td>${escapeHtml(r.inizio)} → ${escapeHtml(r.fine)}</td>
         <td>${escapeHtml(r.tipo)}</td>
         <td><span class="badge ${badgeClass(r.stato)}">${escapeHtml(r.stato)}</span></td>
-        <td>
-          <button class="btn-sm btn-secondary" onclick="updateStatus(${r.id}, 'Approvata')">Approva</button>
-          <button class="btn-sm btn-ghost" onclick="updateStatus(${r.id}, 'Rifiutata')">Rifiuta</button>
+        <td style="white-space:nowrap">
+          <button class="btn-sm btn-secondary" onclick="updateStatus(${r.id}, 'Approvata')">✓ Approva</button>
+          <button class="btn-sm btn-ghost" onclick="updateStatus(${r.id}, 'Rifiutata')">✗ Rifiuta</button>
         </td>
       </tr>
     `).join('');
@@ -263,22 +263,20 @@ async function initAdmin() {
     });
     
     if (filtered.length === 0) {
-      listEl.innerHTML = '<tr><td colspan="7">Nessuna richiesta.</td></tr>';
+      listEl.innerHTML = '<tr><td colspan="5">Nessuna richiesta.</td></tr>';
       return;
     }
     
     listEl.innerHTML = filtered.map(r => `
       <tr>
-        <td><strong>${escapeHtml(r.nome)}</strong></td>
-        <td>${escapeHtml(r.email)}</td>
-        <td>${escapeHtml(r.reparto || '-')}</td>
+        <td><strong>${escapeHtml(r.nome)}</strong><br><small style="color:var(--text-muted)">${escapeHtml(r.email)}</small></td>
         <td>${escapeHtml(r.inizio)} → ${escapeHtml(r.fine)}</td>
         <td>${escapeHtml(r.tipo)}</td>
         <td><span class="badge ${badgeClass(r.stato)}">${escapeHtml(r.stato)}</span></td>
-        <td>
-          <button class="btn-sm btn-secondary" onclick="updateStatus(${r.id}, 'Approvata')">Approva</button>
-          <button class="btn-sm btn-ghost" onclick="updateStatus(${r.id}, 'Rifiutata')">Rifiuta</button>
-          <button class="btn-sm btn-danger" onclick="deleteRequest(${r.id})">Elimina</button>
+        <td style="white-space:nowrap">
+          <button class="btn-sm btn-secondary" onclick="updateStatus(${r.id}, 'Approvata')">✓</button>
+          <button class="btn-sm btn-ghost" onclick="updateStatus(${r.id}, 'Rifiutata')">✗</button>
+          <button class="btn-sm btn-danger" onclick="deleteRequest(${r.id})">🗑</button>
         </td>
       </tr>
     `).join('');
@@ -288,11 +286,10 @@ async function initAdmin() {
     const users = await API.get('/api/users') || [];
     usersEl.innerHTML = users.map(u => `
       <tr>
-        <td>${escapeHtml(u.username)}</td>
-        <td>${escapeHtml(u.name)}</td>
-        <td>${escapeHtml(u.email)}</td>
-        <td>${escapeHtml(u.role)}</td>
-        <td><button class="btn-sm btn-danger" onclick="deleteUser(${u.id})">Elimina</button></td>
+        <td><strong>${escapeHtml(u.username)}</strong></td>
+        <td>${escapeHtml(u.name)}<br><small style="color:var(--text-muted)">${escapeHtml(u.email)}</small></td>
+        <td><span class="badge badge-pending">${escapeHtml(u.role)}</span></td>
+        <td><button class="btn-sm btn-danger" onclick="deleteUser(${u.id})">🗑</button></td>
       </tr>
     `).join('');
   }

@@ -3,45 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - Gestione Ferie</title>
+  <title>Dashboard - Ferie Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
   <header class="topbar">
     <div class="container">
-      <h1>Dashboard Ferie</h1>
+      <h1>Ferie Pro</h1>
       <div class="user-info">
         <nav id="main-nav" class="nav"></nav>
         <span id="user-info"></span>
-        <button class="btn-logout" onclick="Auth.logout()">Logout</button>
+        <button class="btn-logout" onclick="Auth.logout()">Esci</button>
       </div>
     </div>
   </header>
   
   <main class="container">
-    <div class="card">
-      <h2>Statistiche</h2>
-      <div class="kpi">
-        <div class="kpi-item">
-          <div class="value" id="kpi-total">0</div>
-          <div class="label">Totale Richieste</div>
-        </div>
-        <div class="kpi-item">
-          <div class="value" id="kpi-pending">0</div>
-          <div class="label">In Attesa</div>
-        </div>
-        <div class="kpi-item">
-          <div class="value" id="kpi-approved">0</div>
-          <div class="label">Approvate</div>
-        </div>
-        <div class="kpi-item">
-          <div class="value" id="kpi-rejected">0</div>
-          <div class="label">Rifiutate</div>
-        </div>
+    <div class="kpi">
+      <div class="kpi-item">
+        <div class="value" id="kpi-total">0</div>
+        <div class="label">Totale</div>
+      </div>
+      <div class="kpi-item">
+        <div class="value" id="kpi-pending">0</div>
+        <div class="label">In Attesa</div>
+      </div>
+      <div class="kpi-item">
+        <div class="value" id="kpi-approved">0</div>
+        <div class="label">Approvate</div>
+      </div>
+      <div class="kpi-item">
+        <div class="value" id="kpi-rejected">0</div>
+        <div class="label">Rifiutate</div>
       </div>
     </div>
     
-    <div class="card" style="margin-top:20px">
+    <div class="card" style="margin-top:24px">
       <h2>Tutte le Richieste</h2>
       
       <div class="filters">

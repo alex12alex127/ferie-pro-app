@@ -3,34 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - Gestione Ferie</title>
+  <title>Ferie Pro - Accedi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body class="login-page">
   <div class="card login-card">
-    <h1>Gestione Ferie</h1>
-    <p>Accedi al portale aziendale</p>
+    <h1>Ferie Pro</h1>
+    <p>Gestione ferie aziendale</p>
     
     <div id="login-alert" class="alert alert-error hidden"></div>
     
     <form id="login-form">
       <div class="form-group">
         <label for="username">Username</label>
-        <input type="text" id="username" name="username" required placeholder="Inserisci username">
+        <input type="text" id="username" name="username" required placeholder="Inserisci username" autocomplete="username">
       </div>
       <div class="form-group">
         <label for="password">Password</label>
-        <input type="password" id="password" name="password" required placeholder="Inserisci password">
+        <input type="password" id="password" name="password" required placeholder="Inserisci password" autocomplete="current-password">
       </div>
       <button type="submit" style="width:100%">Accedi</button>
     </form>
     
     <div class="demo-info">
-      <strong>Account demo:</strong>
+      <strong>Account demo</strong>
       <ul>
-        <li><b>admin</b> / admin123 (Amministratore)</li>
-        <li><b>manager</b> / manager123 (Manager)</li>
-        <li><b>dipendente</b> / dip123 (Dipendente)</li>
+        <li><b>admin</b> / admin123 — Amministratore</li>
+        <li><b>manager</b> / manager123 — Manager</li>
+        <li><b>dipendente</b> / dip123 — Dipendente</li>
       </ul>
     </div>
   </div>
