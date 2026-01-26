@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Gestione Ferie</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container">
+      <h1>Dashboard Ferie</h1>
+      <div class="user-info">
+        <nav id="main-nav" class="nav"></nav>
+        <span id="user-info"></span>
+        <button class="btn-logout" onclick="Auth.logout()">Logout</button>
+      </div>
+    </div>
+  </header>
+  
+  <main class="container">
+    <div class="card">
+      <h2>Statistiche</h2>
+      <div class="kpi">
+        <div class="kpi-item">
+          <div class="value" id="kpi-total">0</div>
+          <div class="label">Totale Richieste</div>
+        </div>
+        <div class="kpi-item">
+          <div class="value" id="kpi-pending">0</div>
+          <div class="label">In Attesa</div>
+        </div>
+        <div class="kpi-item">
+          <div class="value" id="kpi-approved">0</div>
+          <div class="label">Approvate</div>
+        </div>
+        <div class="kpi-item">
+          <div class="value" id="kpi-rejected">0</div>
+          <div class="label">Rifiutate</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card" style="margin-top:20px">
+      <h2>Tutte le Richieste</h2>
+      
+      <div class="filters">
+        <div class="form-group">
+          <label for="filter-text">Cerca</label>
+          <input type="text" id="filter-text" placeholder="Nome, email, reparto...">
+        </div>
+        <div class="form-group">
+          <label for="filter-status">Stato</label>
+          <select id="filter-status">
+            <option value="">Tutti</option>
+            <option value="In attesa">In attesa</option>
+            <option value="Approvata">Approvata</option>
+            <option value="Rifiutata">Rifiutata</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="filter-from">Da</label>
+          <input type="date" id="filter-from">
+        </div>
+        <div class="form-group">
+          <label for="filter-to">A</label>
+          <input type="date" id="filter-to">
+        </div>
+      </div>
+      
+      <div class="toolbar">
+        <button id="btn-refresh" class="btn-secondary">Aggiorna</button>
+      </div>
+      
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Dipendente</th>
+              <th>Reparto</th>
+              <th>Periodo</th>
+              <th>Tipo</th>
+              <th>Stato</th>
+              <th>Azioni</th>
+            </tr>
+          </thead>
+          <tbody id="requests-list"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  
+  <script src="/js/auth.js"></script>
+  <script src="/js/app.js"></script>
+  <script>initDashboard();</script>
+</body>
+</html>

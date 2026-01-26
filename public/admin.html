@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Gestione Ferie</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container">
+      <h1>Pannello Admin</h1>
+      <div class="user-info">
+        <nav id="main-nav" class="nav"></nav>
+        <span id="user-info"></span>
+        <button class="btn-logout" onclick="Auth.logout()">Logout</button>
+      </div>
+    </div>
+  </header>
+  
+  <main class="container">
+    <div class="grid grid-2">
+      <!-- RICHIESTE -->
+      <div class="card">
+        <h2>Gestione Richieste</h2>
+        
+        <div class="row row-2" style="margin-bottom:16px">
+          <div class="form-group">
+            <label for="filter-text">Cerca</label>
+            <input type="text" id="filter-text" placeholder="Nome, email...">
+          </div>
+          <div class="form-group">
+            <label for="filter-status">Stato</label>
+            <select id="filter-status">
+              <option value="">Tutti</option>
+              <option value="In attesa">In attesa</option>
+              <option value="Approvata">Approvata</option>
+              <option value="Rifiutata">Rifiutata</option>
+            </select>
+          </div>
+        </div>
+        
+        <button id="btn-refresh" class="btn-secondary btn-sm">Aggiorna</button>
+        
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Reparto</th>
+                <th>Periodo</th>
+                <th>Tipo</th>
+                <th>Stato</th>
+                <th>Azioni</th>
+              </tr>
+            </thead>
+            <tbody id="requests-list"></tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- UTENTI -->
+      <div class="card">
+        <h2>Gestione Utenti</h2>
+        
+        <div id="user-alert" class="alert hidden"></div>
+        
+        <form id="user-form" style="margin-bottom:20px">
+          <div class="row row-2">
+            <div class="form-group">
+              <label for="username">Username</label>
+              <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+              <label for="password">Password</label>
+              <input type="password" id="password" name="password" required>
+            </div>
+          </div>
+          <div class="row row-2">
+            <div class="form-group">
+              <label for="name">Nome Completo</label>
+              <input type="text" id="name" name="name" required>
+            </div>
+            <div class="form-group">
+              <label for="email">Email</label>
+              <input type="email" id="email" name="email" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="role">Ruolo</label>
+            <select id="role" name="role">
+              <option value="employee">Dipendente</option>
+              <option value="manager">Manager</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <button type="submit">Crea Utente</button>
+        </form>
+        
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Ruolo</th>
+                <th>Azioni</th>
+              </tr>
+            </thead>
+            <tbody id="users-list"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+  
+  <script src="/js/auth.js"></script>
+  <script src="/js/app.js"></script>
+  <script>initAdmin();</script>
+</body>
+</html>
