@@ -963,3 +963,217 @@ td small, td .muted {
     margin-bottom: 0;
   }
 }
+
+/* ========================================
+   CALENDAR
+   ======================================== */
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.calendar-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.calendar-header h2::before {
+  display: none;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.cal-header {
+  text-align: center;
+  padding: 10px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.cal-day {
+  min-height: 80px;
+  padding: 8px;
+  background: var(--bg-glass);
+  border: var(--border-glass);
+  border-radius: 8px;
+  position: relative;
+}
+
+.cal-day.empty {
+  background: transparent;
+  border: none;
+}
+
+.cal-day.weekend {
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.cal-day.today {
+  border-color: var(--primary);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
+}
+
+.day-num {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.cal-event {
+  margin-top: 4px;
+  padding: 2px 6px;
+  background: var(--success-bg);
+  color: var(--success);
+  font-size: 10px;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendar-legend {
+  margin-top: 16px;
+  display: flex;
+  gap: 20px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.legend-dot.approved {
+  background: var(--success-bg);
+  border: 1px solid var(--success);
+}
+
+@media (max-width: 768px) {
+  .cal-day {
+    min-height: 50px;
+    padding: 4px;
+  }
+  
+  .day-num {
+    font-size: 12px;
+  }
+  
+  .cal-event {
+    font-size: 8px;
+    padding: 1px 3px;
+  }
+  
+  .cal-header {
+    font-size: 9px;
+    padding: 6px 2px;
+  }
+}
+
+/* ========================================
+   PROFILE / DAYS COUNTER
+   ======================================== */
+
+.days-counter {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: var(--bg-glass);
+  border: var(--border-glass);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.days-counter b {
+  font-size: 36px;
+  background: linear-gradient(135deg, var(--success), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.days-bar-bg {
+  margin-top: 12px;
+  height: 8px;
+  background: var(--bg-hover);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.days-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--success), var(--accent));
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.giorni-calc {
+  padding: 10px 14px;
+  margin: -8px 0 16px;
+  background: var(--success-bg);
+  color: var(--success);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.giorni-calc:empty {
+  display: none;
+}
+
+/* ========================================
+   KPI 5 ITEMS
+   ======================================== */
+
+.kpi {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+@media (max-width: 1000px) {
+  .kpi {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .kpi {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ========================================
+   NOTIFICATIONS
+   ======================================== */
+
+.notif-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: var(--danger);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+#notif-bell {
+  position: relative;
+  cursor: pointer;
+  font-size: 18px;
+}

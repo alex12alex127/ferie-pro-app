@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nuova Richiesta - Ferie Pro</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
 </head>
@@ -30,66 +29,69 @@
         <form id="request-form">
           <div class="row row-2">
             <div class="form-group">
-              <label for="nome">Nome e Cognome</label>
-              <input type="text" id="nome" name="nome" required>
+              <label>Nome e Cognome</label>
+              <input type="text" name="nome" required>
             </div>
             <div class="form-group">
-              <label for="email">Email</label>
-              <input type="email" id="email" name="email" required>
+              <label>Email</label>
+              <input type="email" name="email" required>
             </div>
           </div>
           
           <div class="row row-2">
             <div class="form-group">
-              <label for="reparto">Reparto</label>
-              <input type="text" id="reparto" name="reparto" placeholder="es. Produzione">
+              <label>Reparto</label>
+              <input type="text" name="reparto" placeholder="es. IT, Produzione">
             </div>
             <div class="form-group">
-              <label for="responsabile">Responsabile</label>
-              <input type="text" id="responsabile" name="responsabile" placeholder="es. Mario Rossi">
+              <label>Responsabile</label>
+              <input type="text" name="responsabile" placeholder="Nome responsabile">
             </div>
           </div>
           
+          <div class="row row-2">
+            <div class="form-group">
+              <label>Data Inizio</label>
+              <input type="date" name="inizio" required>
+            </div>
+            <div class="form-group">
+              <label>Data Fine</label>
+              <input type="date" name="fine" required>
+            </div>
+          </div>
+          
+          <div id="giorni-calc" class="giorni-calc"></div>
+          
           <div class="row row-3">
             <div class="form-group">
-              <label for="inizio">Data Inizio</label>
-              <input type="date" id="inizio" name="inizio" required>
-            </div>
-            <div class="form-group">
-              <label for="fine">Data Fine</label>
-              <input type="date" id="fine" name="fine" required>
-            </div>
-            <div class="form-group">
-              <label for="tipo">Tipo Richiesta</label>
-              <select id="tipo" name="tipo">
+              <label>Tipo</label>
+              <select name="tipo">
                 <option value="Ferie">Ferie</option>
                 <option value="Permesso">Permesso</option>
                 <option value="Malattia">Malattia</option>
                 <option value="Smart Working">Smart Working</option>
+                <option value="Congedo">Congedo</option>
+                <option value="Altro">Altro</option>
               </select>
             </div>
-          </div>
-          
-          <div class="row row-2">
             <div class="form-group">
-              <label for="urgenza">Priorità</label>
-              <select id="urgenza" name="urgenza">
+              <label>Priorità</label>
+              <select name="urgenza">
                 <option value="Normale">Normale</option>
                 <option value="Alta">Alta</option>
+                <option value="Urgente">Urgente</option>
               </select>
             </div>
             <div class="form-group">
-              <label for="telefono">Telefono</label>
-              <input type="tel" id="telefono" name="telefono" placeholder="+39 xxx xxx xxxx">
+              <label>Telefono</label>
+              <input type="tel" name="telefono" placeholder="+39...">
             </div>
           </div>
           
           <div class="form-group">
-            <label for="motivo">Note (opzionale)</label>
-            <textarea id="motivo" name="motivo" rows="3" placeholder="Aggiungi note o motivazioni..."></textarea>
+            <label>Note</label>
+            <textarea name="motivo" rows="2" placeholder="Motivazione o note aggiuntive..."></textarea>
           </div>
-          
-          <input type="hidden" id="ruolo" name="ruolo" value="">
           
           <button type="submit">Invia Richiesta</button>
         </form>
@@ -103,9 +105,9 @@
               <tr>
                 <th>Periodo</th>
                 <th>Tipo</th>
-                <th class="hide-mobile">Priorità</th>
+                <th>Giorni</th>
                 <th>Stato</th>
-                <th class="hide-mobile">Data</th>
+                <th class="hide-mobile">Approvato da</th>
               </tr>
             </thead>
             <tbody id="my-requests"></tbody>

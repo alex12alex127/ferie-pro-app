@@ -1,345 +1,234 @@
 const API = {
-  async get(url) {
-    const res = await fetch(url, { headers: Auth.authHeaders() });
+  async req(method, url, body) {
+    const res = await fetch(url, { method, headers: Auth.authHeaders(), body: body ? JSON.stringify(body) : undefined });
     if (res.status === 401) { Auth.logout(); return; }
-    return res.json();
+    const ct = res.headers.get('content-type');
+    return ct?.includes('json') ? res.json() : res.text();
   },
-  async post(url, body) {
-    const res = await fetch(url, { method: 'POST', headers: Auth.authHeaders(), body: JSON.stringify(body) });
-    if (res.status === 401) { Auth.logout(); return; }
-    return res.json();
-  },
-  async patch(url, body) {
-    const res = await fetch(url, { method: 'PATCH', headers: Auth.authHeaders(), body: JSON.stringify(body) });
-    if (res.status === 401) { Auth.logout(); return; }
-    return res.json();
-  },
-  async delete(url) {
-    const res = await fetch(url, { method: 'DELETE', headers: Auth.authHeaders() });
-    if (res.status === 401) { Auth.logout(); return; }
-    return res.json();
-  }
+  get: (url) => API.req('GET', url),
+  post: (url, body) => API.req('POST', url, body),
+  patch: (url, body) => API.req('PATCH', url, body),
+  delete: (url) => API.req('DELETE', url)
 };
 
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str || '';
-  return div.innerHTML;
-}
-
-function badgeClass(stato) {
-  if (stato === 'Approvata') return 'badge-approved';
-  if (stato === 'Rifiutata') return 'badge-rejected';
-  return 'badge-pending';
-}
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+const esc = (s) => { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; };
+const badge = (s) => s === 'Approvata' ? 'badge-approved' : s === 'Rifiutata' ? 'badge-rejected' : 'badge-pending';
 
 function renderNav(active) {
-  const nav = document.getElementById('main-nav');
-  const user = Auth.getUser();
+  const nav = $('#main-nav'), user = Auth.getUser();
   if (!nav || !user) return;
-  
   const items = [
-    { key: 'request', label: 'Nuova Richiesta', href: '/request.html', roles: ['employee', 'manager', 'admin'] },
-    { key: 'dashboard', label: 'Dashboard', href: '/dashboard.html', roles: ['manager', 'admin'] },
-    { key: 'admin', label: 'Admin', href: '/admin.html', roles: ['admin'] },
+    { k: 'request', l: 'Richiesta', h: '/request.html', r: ['employee', 'manager', 'admin'] },
+    { k: 'calendar', l: 'Calendario', h: '/calendar.html', r: ['employee', 'manager', 'admin'] },
+    { k: 'dashboard', l: 'Dashboard', h: '/dashboard.html', r: ['manager', 'admin'] },
+    { k: 'admin', l: 'Admin', h: '/admin.html', r: ['admin'] },
+    { k: 'profile', l: 'Profilo', h: '/profile.html', r: ['employee', 'manager', 'admin'] }
   ];
-  
-  nav.innerHTML = items
-    .filter(i => i.roles.includes(user.role))
-    .map(i => `<a href="${i.href}" class="${i.key === active ? 'active' : ''}">${i.label}</a>`)
-    .join('');
+  nav.innerHTML = items.filter(i => i.r.includes(user.role)).map(i => `<a href="${i.h}" class="${i.k === active ? 'active' : ''}">${i.l}</a>`).join('');
+  const ui = $('#user-info');
+  if (ui) ui.innerHTML = `${esc(user.name)} <small>(${user.role})</small>`;
+  loadNotifications();
 }
 
-function renderUserInfo() {
-  const el = document.getElementById('user-info');
-  const user = Auth.getUser();
-  if (el && user) {
-    el.innerHTML = `${escapeHtml(user.name)} <span style="color:var(--text-muted)">(${user.role})</span>`;
-  }
+async function loadNotifications() {
+  const notifs = await API.get('/api/notifications');
+  const unread = notifs?.filter(n => !n.read).length || 0;
+  const bell = $('#notif-bell');
+  if (bell) bell.innerHTML = unread > 0 ? `🔔<span class="notif-badge">${unread}</span>` : '🔔';
 }
 
-// LOGIN PAGE
+// LOGIN
 function initLogin() {
-  if (Auth.isLoggedIn()) {
-    Auth.redirectByRole();
-    return;
-  }
-  const form = document.getElementById('login-form');
-  const alert = document.getElementById('login-alert');
-  
-  form.addEventListener('submit', async (e) => {
+  if (Auth.isLoggedIn()) { Auth.redirectByRole(); return; }
+  $('#login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const alert = $('#login-alert');
     alert.classList.add('hidden');
-    const username = form.username.value.trim();
-    const password = form.password.value.trim();
-    
     try {
-      await Auth.login(username, password);
+      await Auth.login($('#username').value.trim(), $('#password').value.trim());
       Auth.redirectByRole();
-    } catch (err) {
-      alert.textContent = err.message;
-      alert.classList.remove('hidden');
-    }
+    } catch (err) { alert.textContent = err.message; alert.classList.remove('hidden'); }
   });
 }
 
-// REQUEST PAGE
+// REQUEST
 async function initRequest() {
   if (!Auth.requireAuth()) return;
   renderNav('request');
-  renderUserInfo();
-  
-  const user = Auth.getUser();
-  const form = document.getElementById('request-form');
-  const alert = document.getElementById('request-alert');
-  const listEl = document.getElementById('my-requests');
-  
+  const user = Auth.getUser(), form = $('#request-form'), alert = $('#request-alert'), list = $('#my-requests');
   form.nome.value = user.name;
   form.email.value = user.email;
   
+  const updateDays = () => {
+    const start = form.inizio.value, end = form.fine.value;
+    if (start && end) {
+      let count = 0, cur = new Date(start);
+      const endD = new Date(end);
+      while (cur <= endD) { if (cur.getDay() !== 0 && cur.getDay() !== 6) count++; cur.setDate(cur.getDate() + 1); }
+      $('#giorni-calc').textContent = `${count || 1} giorni lavorativi`;
+    }
+  };
+  form.inizio.addEventListener('change', updateDays);
+  form.fine.addEventListener('change', updateDays);
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     alert.classList.add('hidden');
-    
-    const payload = {
-      nome: form.nome.value.trim(),
-      email: form.email.value.trim(),
-      reparto: form.reparto.value.trim(),
-      ruolo: form.ruolo.value.trim(),
-      responsabile: form.responsabile.value.trim(),
-      inizio: form.inizio.value,
-      fine: form.fine.value,
-      tipo: form.tipo.value,
-      urgenza: form.urgenza.value,
-      motivo: form.motivo.value.trim(),
-      telefono: form.telefono.value.trim(),
-    };
-    
-    if (!payload.inizio || !payload.fine) {
-      alert.textContent = 'Inserisci le date di inizio e fine.';
-      alert.className = 'alert alert-error';
-      alert.classList.remove('hidden');
-      return;
-    }
-    
+    const payload = { nome: form.nome.value.trim(), email: form.email.value.trim(), reparto: form.reparto.value.trim(), ruolo: form.ruolo?.value?.trim() || '', responsabile: form.responsabile.value.trim(), inizio: form.inizio.value, fine: form.fine.value, tipo: form.tipo.value, urgenza: form.urgenza.value, motivo: form.motivo.value.trim(), telefono: form.telefono.value.trim() };
+    if (!payload.inizio || !payload.fine) { alert.textContent = 'Inserisci le date.'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); return; }
+    if (payload.fine < payload.inizio) { alert.textContent = 'Data fine deve essere dopo inizio.'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); return; }
     try {
       await API.post('/api/requests', payload);
-      alert.textContent = 'Richiesta inviata con successo!';
-      alert.className = 'alert alert-success';
-      alert.classList.remove('hidden');
-      form.reset();
-      form.nome.value = user.name;
-      form.email.value = user.email;
+      alert.textContent = 'Richiesta inviata!'; alert.className = 'alert alert-success'; alert.classList.remove('hidden');
+      form.reset(); form.nome.value = user.name; form.email.value = user.email;
       loadMyRequests();
-    } catch (err) {
-      alert.textContent = err.message || 'Errore invio richiesta';
-      alert.className = 'alert alert-error';
-      alert.classList.remove('hidden');
-    }
+    } catch (err) { alert.textContent = err.message || 'Errore'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
   });
-  
+
   async function loadMyRequests() {
-    const data = await API.get('/api/requests');
-    if (!data || data.length === 0) {
-      listEl.innerHTML = '<tr><td colspan="5">Nessuna richiesta.</td></tr>';
-      return;
-    }
-    listEl.innerHTML = data.map(r => `
-      <tr>
-        <td><strong>${escapeHtml(r.inizio)}</strong><br><small>→ ${escapeHtml(r.fine)}</small></td>
-        <td>${escapeHtml(r.tipo)}</td>
-        <td class="hide-mobile">${escapeHtml(r.urgenza)}</td>
-        <td><span class="badge ${badgeClass(r.stato)}">${escapeHtml(r.stato)}</span></td>
-        <td class="hide-mobile">${escapeHtml(r.created_at?.split('T')[0] || '')}</td>
-      </tr>
-    `).join('');
+    const data = await API.get('/api/requests') || [];
+    list.innerHTML = data.length ? data.map(r => `<tr><td><b>${esc(r.inizio)}</b><br><small>→ ${esc(r.fine)}</small></td><td>${esc(r.tipo)}</td><td>${r.giorni}g</td><td><span class="badge ${badge(r.stato)}">${esc(r.stato)}</span></td><td class="hide-mobile">${r.approved_by_name ? esc(r.approved_by_name) : '-'}</td></tr>`).join('') : '<tr><td colspan="5">Nessuna richiesta.</td></tr>';
   }
-  
   loadMyRequests();
 }
 
-// DASHBOARD PAGE
+// DASHBOARD
 async function initDashboard() {
   if (!Auth.requireAuth() || !Auth.requireRole(['manager', 'admin'])) return;
   renderNav('dashboard');
-  renderUserInfo();
-  
-  const listEl = document.getElementById('requests-list');
-  const filterText = document.getElementById('filter-text');
-  const filterStatus = document.getElementById('filter-status');
-  const filterFrom = document.getElementById('filter-from');
-  const filterTo = document.getElementById('filter-to');
-  
-  let allData = [];
-  
-  async function loadStats() {
-    const stats = await API.get('/api/stats');
-    document.getElementById('kpi-total').textContent = stats.total;
-    document.getElementById('kpi-pending').textContent = stats.pending;
-    document.getElementById('kpi-approved').textContent = stats.approved;
-    document.getElementById('kpi-rejected').textContent = stats.rejected;
+  const list = $('#requests-list'), ft = $('#filter-text'), fs = $('#filter-status'), ff = $('#filter-from'), fto = $('#filter-to');
+  let all = [];
+
+  async function load() {
+    const [stats, data] = await Promise.all([API.get('/api/stats'), API.get('/api/requests')]);
+    $('#kpi-total').textContent = stats.total; $('#kpi-pending').textContent = stats.pending;
+    $('#kpi-approved').textContent = stats.approved; $('#kpi-rejected').textContent = stats.rejected;
+    $('#kpi-month').textContent = stats.thisMonth;
+    all = data || []; render();
   }
-  
-  async function loadRequests() {
-    allData = await API.get('/api/requests') || [];
-    renderList();
-  }
-  
-  function renderList() {
-    const q = (filterText.value || '').toLowerCase();
-    const status = filterStatus.value;
-    const from = filterFrom.value;
-    const to = filterTo.value;
-    
-    const filtered = allData.filter(r => {
-      const text = [r.nome, r.email, r.reparto, r.tipo].join(' ').toLowerCase();
-      if (q && !text.includes(q)) return false;
-      if (status && r.stato !== status) return false;
+
+  function render() {
+    const q = (ft.value || '').toLowerCase(), st = fs.value, from = ff.value, to = fto.value;
+    const filtered = all.filter(r => {
+      if (q && ![r.nome, r.email, r.reparto, r.tipo].join(' ').toLowerCase().includes(q)) return false;
+      if (st && r.stato !== st) return false;
       if (from && r.inizio < from) return false;
       if (to && r.fine > to) return false;
       return true;
     });
-    
-    if (filtered.length === 0) {
-      listEl.innerHTML = '<tr><td colspan="6">Nessuna richiesta trovata.</td></tr>';
-      return;
-    }
-    
-    listEl.innerHTML = filtered.map(r => `
-      <tr>
-        <td><strong>${escapeHtml(r.nome)}</strong><br><small style="color:var(--text-muted)">${escapeHtml(r.email)}</small></td>
-        <td class="hide-mobile">${escapeHtml(r.reparto || '-')}</td>
-        <td>${escapeHtml(r.inizio)}<br><small>→ ${escapeHtml(r.fine)}</small></td>
-        <td class="hide-mobile">${escapeHtml(r.tipo)}</td>
-        <td><span class="badge ${badgeClass(r.stato)}">${escapeHtml(r.stato)}</span></td>
-        <td>
-          <button class="btn-sm btn-secondary" onclick="updateStatus(${r.id}, 'Approvata')">✓</button>
-          <button class="btn-sm btn-ghost" onclick="updateStatus(${r.id}, 'Rifiutata')">✗</button>
-        </td>
-      </tr>
-    `).join('');
+    list.innerHTML = filtered.length ? filtered.map(r => `<tr><td><b>${esc(r.nome)}</b><br><small>${esc(r.email)}</small></td><td class="hide-mobile">${esc(r.reparto || '-')}</td><td>${esc(r.inizio)}<br><small>→ ${esc(r.fine)}</small></td><td>${r.giorni}g</td><td><span class="badge ${badge(r.stato)}">${esc(r.stato)}</span></td><td><button class="btn-sm btn-secondary" onclick="action(${r.id},'Approvata')">✓</button> <button class="btn-sm btn-ghost" onclick="action(${r.id},'Rifiutata')">✗</button></td></tr>`).join('') : '<tr><td colspan="6">Nessuna richiesta.</td></tr>';
   }
-  
-  window.updateStatus = async function(id, stato) {
-    await API.patch(`/api/requests/${id}/status`, { stato });
-    loadRequests();
-    loadStats();
-  };
-  
-  [filterText, filterStatus, filterFrom, filterTo].forEach(el => el.addEventListener('input', renderList));
-  document.getElementById('btn-refresh').addEventListener('click', () => { loadRequests(); loadStats(); });
-  
-  loadStats();
-  loadRequests();
+
+  window.action = async (id, stato) => { await API.patch(`/api/requests/${id}/status`, { stato }); load(); };
+  window.exportData = (format) => { window.open(`/api/export?format=${format}&from=${ff.value}&to=${fto.value}&stato=${fs.value}`); };
+
+  [ft, fs, ff, fto].forEach(el => el.addEventListener('input', render));
+  $('#btn-refresh').addEventListener('click', load);
+  load();
 }
 
-// ADMIN PAGE
+// ADMIN
 async function initAdmin() {
   if (!Auth.requireAuth() || !Auth.requireRole(['admin'])) return;
   renderNav('admin');
-  renderUserInfo();
-  
-  const listEl = document.getElementById('requests-list');
-  const usersEl = document.getElementById('users-list');
-  const filterText = document.getElementById('filter-text');
-  const filterStatus = document.getElementById('filter-status');
-  
-  let allData = [];
-  
-  async function loadRequests() {
-    allData = await API.get('/api/requests') || [];
-    renderList();
+  const list = $('#requests-list'), users = $('#users-list'), ft = $('#filter-text'), fs = $('#filter-status');
+  let all = [];
+
+  async function loadReq() { all = await API.get('/api/requests') || []; renderReq(); }
+  function renderReq() {
+    const q = (ft.value || '').toLowerCase(), st = fs.value;
+    const f = all.filter(r => (!q || [r.nome, r.email].join(' ').toLowerCase().includes(q)) && (!st || r.stato === st));
+    list.innerHTML = f.length ? f.map(r => `<tr><td><b>${esc(r.nome)}</b><br><small>${esc(r.email)}</small></td><td>${esc(r.inizio)} → ${esc(r.fine)}</td><td><span class="badge ${badge(r.stato)}">${esc(r.stato)}</span></td><td><button class="btn-sm btn-secondary" onclick="action(${r.id},'Approvata')">✓</button> <button class="btn-sm btn-ghost" onclick="action(${r.id},'Rifiutata')">✗</button> <button class="btn-sm btn-danger" onclick="delReq(${r.id})">🗑</button></td></tr>`).join('') : '<tr><td colspan="4">Nessuna.</td></tr>';
   }
-  
-  function renderList() {
-    const q = (filterText.value || '').toLowerCase();
-    const status = filterStatus.value;
-    
-    const filtered = allData.filter(r => {
-      const text = [r.nome, r.email, r.reparto].join(' ').toLowerCase();
-      if (q && !text.includes(q)) return false;
-      if (status && r.stato !== status) return false;
-      return true;
-    });
-    
-    if (filtered.length === 0) {
-      listEl.innerHTML = '<tr><td colspan="5">Nessuna richiesta.</td></tr>';
-      return;
-    }
-    
-    listEl.innerHTML = filtered.map(r => `
-      <tr>
-        <td><strong>${escapeHtml(r.nome)}</strong><br><small style="color:var(--text-muted)">${escapeHtml(r.email)}</small></td>
-        <td>${escapeHtml(r.inizio)} → ${escapeHtml(r.fine)}</td>
-        <td>${escapeHtml(r.tipo)}</td>
-        <td><span class="badge ${badgeClass(r.stato)}">${escapeHtml(r.stato)}</span></td>
-        <td style="white-space:nowrap">
-          <button class="btn-sm btn-secondary" onclick="updateStatus(${r.id}, 'Approvata')">✓</button>
-          <button class="btn-sm btn-ghost" onclick="updateStatus(${r.id}, 'Rifiutata')">✗</button>
-          <button class="btn-sm btn-danger" onclick="deleteRequest(${r.id})">🗑</button>
-        </td>
-      </tr>
-    `).join('');
-  }
-  
+
   async function loadUsers() {
-    const users = await API.get('/api/users') || [];
-    usersEl.innerHTML = users.map(u => `
-      <tr>
-        <td><strong>${escapeHtml(u.username)}</strong></td>
-        <td>${escapeHtml(u.name)}<br><small style="color:var(--text-muted)">${escapeHtml(u.email)}</small></td>
-        <td><span class="badge badge-pending">${escapeHtml(u.role)}</span></td>
-        <td><button class="btn-sm btn-danger" onclick="deleteUser(${u.id})">🗑</button></td>
-      </tr>
-    `).join('');
+    const data = await API.get('/api/users') || [];
+    users.innerHTML = data.map(u => `<tr><td><b>${esc(u.username)}</b></td><td>${esc(u.name)}<br><small>${esc(u.email)}</small></td><td>${u.total_days - u.used_days}/${u.total_days}</td><td><span class="badge badge-pending">${esc(u.role)}</span></td><td><button class="btn-sm btn-danger" onclick="delUser(${u.id})">🗑</button></td></tr>`).join('');
   }
-  
-  window.updateStatus = async function(id, stato) {
-    await API.patch(`/api/requests/${id}/status`, { stato });
-    loadRequests();
-  };
-  
-  window.deleteRequest = async function(id) {
-    if (!confirm('Eliminare questa richiesta?')) return;
-    await API.delete(`/api/requests/${id}`);
-    loadRequests();
-  };
-  
-  window.deleteUser = async function(id) {
-    if (!confirm('Eliminare questo utente?')) return;
-    await API.delete(`/api/users/${id}`);
-    loadUsers();
-  };
-  
-  // New user form
-  const userForm = document.getElementById('user-form');
-  const userAlert = document.getElementById('user-alert');
-  userForm.addEventListener('submit', async (e) => {
+
+  window.action = async (id, stato) => { await API.patch(`/api/requests/${id}/status`, { stato }); loadReq(); };
+  window.delReq = async (id) => { if (confirm('Eliminare?')) { await API.delete(`/api/requests/${id}`); loadReq(); } };
+  window.delUser = async (id) => { if (confirm('Eliminare utente?')) { await API.delete(`/api/users/${id}`); loadUsers(); } };
+
+  $('#user-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    userAlert.classList.add('hidden');
+    const f = e.target, alert = $('#user-alert');
+    alert.classList.add('hidden');
     try {
-      await API.post('/api/users', {
-        username: userForm.username.value.trim(),
-        password: userForm.password.value,
-        name: userForm.name.value.trim(),
-        email: userForm.email.value.trim(),
-        role: userForm.role.value,
-      });
-      userAlert.textContent = 'Utente creato!';
-      userAlert.className = 'alert alert-success';
-      userAlert.classList.remove('hidden');
-      userForm.reset();
-      loadUsers();
-    } catch (err) {
-      userAlert.textContent = err.message || 'Errore creazione utente';
-      userAlert.className = 'alert alert-error';
-      userAlert.classList.remove('hidden');
-    }
+      await API.post('/api/users', { username: f.username.value.trim(), password: f.password.value, name: f.name.value.trim(), email: f.email.value.trim(), role: f.role.value, total_days: parseInt(f.total_days?.value) || 26 });
+      alert.textContent = 'Utente creato!'; alert.className = 'alert alert-success'; alert.classList.remove('hidden');
+      f.reset(); loadUsers();
+    } catch (err) { alert.textContent = err.message || 'Errore'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
   });
+
+  [ft, fs].forEach(el => el.addEventListener('input', renderReq));
+  $('#btn-refresh').addEventListener('click', loadReq);
+  loadReq(); loadUsers();
+}
+
+// PROFILE
+async function initProfile() {
+  if (!Auth.requireAuth()) return;
+  renderNav('profile');
+  const profile = await API.get('/api/profile');
+  const f = $('#profile-form'), cp = $('#password-form'), alert = $('#profile-alert'), palert = $('#password-alert');
   
-  [filterText, filterStatus].forEach(el => el.addEventListener('input', renderList));
-  document.getElementById('btn-refresh').addEventListener('click', loadRequests);
-  
-  loadRequests();
-  loadUsers();
+  f.name.value = profile.name; f.email.value = profile.email; f.phone.value = profile.phone || ''; f.department.value = profile.department || '';
+  $('#days-info').innerHTML = `<b>${profile.total_days - profile.used_days}</b> giorni rimanenti su ${profile.total_days}`;
+  $('#days-bar').style.width = `${((profile.total_days - profile.used_days) / profile.total_days) * 100}%`;
+
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault(); alert.classList.add('hidden');
+    try {
+      await API.patch('/api/profile', { name: f.name.value.trim(), phone: f.phone.value.trim(), department: f.department.value.trim() });
+      alert.textContent = 'Profilo aggiornato!'; alert.className = 'alert alert-success'; alert.classList.remove('hidden');
+      const user = Auth.getUser(); user.name = f.name.value.trim(); Auth.setAuth(Auth.getToken(), user);
+    } catch (err) { alert.textContent = err.message || 'Errore'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
+  });
+
+  cp.addEventListener('submit', async (e) => {
+    e.preventDefault(); palert.classList.add('hidden');
+    if (cp.newPassword.value !== cp.confirmPassword.value) { palert.textContent = 'Le password non coincidono'; palert.className = 'alert alert-error'; palert.classList.remove('hidden'); return; }
+    try {
+      await API.post('/api/change-password', { oldPassword: cp.oldPassword.value, newPassword: cp.newPassword.value });
+      palert.textContent = 'Password cambiata!'; palert.className = 'alert alert-success'; palert.classList.remove('hidden');
+      cp.reset();
+    } catch (err) { palert.textContent = err.message || 'Errore'; palert.className = 'alert alert-error'; palert.classList.remove('hidden'); }
+  });
+}
+
+// CALENDAR
+async function initCalendar() {
+  if (!Auth.requireAuth()) return;
+  renderNav('calendar');
+  let currentDate = new Date();
+  const calendar = $('#calendar-grid'), monthLabel = $('#month-label');
+  const months = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+
+  async function render() {
+    const year = currentDate.getFullYear(), month = currentDate.getMonth() + 1;
+    monthLabel.textContent = `${months[month - 1]} ${year}`;
+    const events = await API.get(`/api/calendar?year=${year}&month=${month}`) || [];
+    const firstDay = new Date(year, month - 1, 1).getDay();
+    const daysInMonth = new Date(year, month, 0).getDate();
+    
+    let html = '<div class="cal-header">Lun</div><div class="cal-header">Mar</div><div class="cal-header">Mer</div><div class="cal-header">Gio</div><div class="cal-header">Ven</div><div class="cal-header">Sab</div><div class="cal-header">Dom</div>';
+    const startDay = firstDay === 0 ? 6 : firstDay - 1;
+    for (let i = 0; i < startDay; i++) html += '<div class="cal-day empty"></div>';
+    
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const dayEvents = events.filter(e => dateStr >= e.inizio && dateStr <= e.fine);
+      const isWeekend = new Date(year, month - 1, d).getDay() % 6 === 0;
+      const isToday = new Date().toISOString().slice(0, 10) === dateStr;
+      html += `<div class="cal-day${isWeekend ? ' weekend' : ''}${isToday ? ' today' : ''}"><span class="day-num">${d}</span>${dayEvents.map(e => `<div class="cal-event" title="${esc(e.nome)}">${esc(e.nome.split(' ')[0])}</div>`).join('')}</div>`;
+    }
+    calendar.innerHTML = html;
+  }
+
+  window.prevMonth = () => { currentDate.setMonth(currentDate.getMonth() - 1); render(); };
+  window.nextMonth = () => { currentDate.setMonth(currentDate.getMonth() + 1); render(); };
+  render();
 }

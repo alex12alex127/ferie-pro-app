@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - Ferie Pro</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
 </head>
@@ -23,34 +22,23 @@
   
   <main class="container">
     <div class="kpi">
-      <div class="kpi-item">
-        <div class="value" id="kpi-total">0</div>
-        <div class="label">Totale</div>
-      </div>
-      <div class="kpi-item">
-        <div class="value" id="kpi-pending">0</div>
-        <div class="label">In Attesa</div>
-      </div>
-      <div class="kpi-item">
-        <div class="value" id="kpi-approved">0</div>
-        <div class="label">Approvate</div>
-      </div>
-      <div class="kpi-item">
-        <div class="value" id="kpi-rejected">0</div>
-        <div class="label">Rifiutate</div>
-      </div>
+      <div class="kpi-item"><div class="value" id="kpi-total">0</div><div class="label">Totale</div></div>
+      <div class="kpi-item"><div class="value" id="kpi-pending">0</div><div class="label">In Attesa</div></div>
+      <div class="kpi-item"><div class="value" id="kpi-approved">0</div><div class="label">Approvate</div></div>
+      <div class="kpi-item"><div class="value" id="kpi-rejected">0</div><div class="label">Rifiutate</div></div>
+      <div class="kpi-item"><div class="value" id="kpi-month">0</div><div class="label">Questo Mese</div></div>
     </div>
     
     <div class="card" style="margin-top:24px">
-      <h2>Tutte le Richieste</h2>
+      <h2>Richieste</h2>
       
       <div class="filters">
         <div class="form-group">
-          <label for="filter-text">Cerca</label>
-          <input type="text" id="filter-text" placeholder="Nome, email, reparto...">
+          <label>Cerca</label>
+          <input type="text" id="filter-text" placeholder="Nome, email...">
         </div>
         <div class="form-group">
-          <label for="filter-status">Stato</label>
+          <label>Stato</label>
           <select id="filter-status">
             <option value="">Tutti</option>
             <option value="In attesa">In attesa</option>
@@ -59,17 +47,19 @@
           </select>
         </div>
         <div class="form-group">
-          <label for="filter-from">Da</label>
+          <label>Da</label>
           <input type="date" id="filter-from">
         </div>
         <div class="form-group">
-          <label for="filter-to">A</label>
+          <label>A</label>
           <input type="date" id="filter-to">
         </div>
       </div>
       
       <div class="toolbar">
         <button id="btn-refresh" class="btn-secondary">Aggiorna</button>
+        <button class="btn-ghost" onclick="exportData('csv')">📥 Export CSV</button>
+        <button class="btn-ghost" onclick="exportData('json')">📥 Export JSON</button>
       </div>
       
       <div class="table-wrap">
@@ -79,7 +69,7 @@
               <th>Dipendente</th>
               <th class="hide-mobile">Reparto</th>
               <th>Periodo</th>
-              <th class="hide-mobile">Tipo</th>
+              <th>Giorni</th>
               <th>Stato</th>
               <th>Azioni</th>
             </tr>
