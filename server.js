@@ -13,7 +13,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'ferie-secret-key-change-in-product
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  extensions: ['html', 'htm'],
+  index: 'index.html'
+}));
 
 // Database setup
 const dataDir = path.join(__dirname, 'data');
@@ -174,7 +177,28 @@ app.get('/api/stats', authMiddleware, managerMiddleware, (req, res) => {
   res.json({ total, pending, approved, rejected });
 });
 
-// Serve frontend
+// Serve HTML pages explicitly
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/index.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/request.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'request.html'));
+});
+
+app.get('/dashboard.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+app.get('/admin.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+// Fallback to index.html for any other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
