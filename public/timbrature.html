@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timbrature</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header class="topbar"><div class="container"><h1>Ferie Pro</h1><div class="user-info"><nav id="main-nav" class="nav"></nav><span id="user-info"></span><button class="btn-logout" onclick="Auth.logout()">Esci</button></div></div></header>
+  <main class="container">
+    <div class="card" style="text-align:center;margin-bottom:20px">
+      <h2>Timbra Presenza</h2>
+      <p id="ora-attuale" style="font-size:32px;font-weight:700;color:var(--primary);margin:20px 0"></p>
+      <div class="form-group" style="max-width:300px;margin:0 auto 16px">
+        <select id="cantiere-timbra"><option value="">Cantiere (opzionale)</option></select>
+      </div>
+      <div class="toolbar" style="justify-content:center">
+        <button class="btn-secondary" onclick="timbra('Entrata')">🟢 Entrata</button>
+        <button class="btn-danger" onclick="timbra('Uscita')">🔴 Uscita</button>
+      </div>
+      <div id="timbra-alert" class="alert hidden" style="margin-top:16px"></div>
+    </div>
+    <div class="card">
+      <h2>Storico Timbrature</h2>
+      <div class="row row-2" style="margin-bottom:12px">
+        <div class="form-group"><label>Mese</label><input type="month" id="filter-mese"></div>
+        <div class="form-group"><label>Cerca</label><input type="text" id="filter" placeholder="Nome..."></div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Data</th><th>Ora</th><th>Tipo</th><th class="hide-mobile">Cantiere</th><th class="hide-mobile">Tecnico</th></tr></thead><tbody id="list"></tbody></table></div>
+    </div>
+  </main>
+  <script src="/js/auth.js"></script>
+  <script src="/js/app.js"></script>
+  <script>initTimbrature();</script>
+</body>
+</html>
