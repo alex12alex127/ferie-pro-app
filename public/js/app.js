@@ -53,6 +53,48 @@ function initLogin() {
   });
 }
 
+// REGISTER
+function initRegister() {
+  if (Auth.isLoggedIn()) { Auth.redirectByRole(); return; }
+  $('#register-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const alert = $('#register-alert');
+    alert.classList.add('hidden');
+    const username = $('#reg-username').value.trim();
+    const name = $('#reg-name').value.trim();
+    const email = $('#reg-email').value.trim();
+    const password = $('#reg-password').value;
+    const confirm = $('#reg-confirm').value;
+    
+    if (password !== confirm) {
+      alert.textContent = 'Le password non coincidono';
+      alert.className = 'alert alert-error';
+      alert.classList.remove('hidden');
+      return;
+    }
+    
+    try {
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, name, email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      
+      Auth.setAuth(data.token, data.user);
+      alert.textContent = 'Registrazione completata! Reindirizzamento...';
+      alert.className = 'alert alert-success';
+      alert.classList.remove('hidden');
+      setTimeout(() => Auth.redirectByRole(), 1500);
+    } catch (err) {
+      alert.textContent = err.message;
+      alert.className = 'alert alert-error';
+      alert.classList.remove('hidden');
+    }
+  });
+}
+
 // REQUEST
 async function initRequest() {
   if (!Auth.requireAuth()) return;

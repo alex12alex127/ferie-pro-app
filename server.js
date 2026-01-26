@@ -132,6 +132,22 @@ app.post('/api/login', (req, res) => {
   res.json({ token, user: { id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, phone: user.phone, department: user.department, total_days: user.total_days, used_days: user.used_days } });
 });
 
+app.post('/api/register', (req, res) => {
+  const { username, password, name, email } = req.body;
+  if (!username || !password || !name || !email) return res.status(400).json({ error: 'Tutti i campi sono obbligatori' });
+  if (username.length < 3) return res.status(400).json({ error: 'Username deve avere almeno 3 caratteri' });
+  if (password.length < 6) return res.status(400).json({ error: 'Password deve avere almeno 6 caratteri' });
+  try {
+    const result = db.prepare('INSERT INTO users (username, password, name, email, role) VALUES (?, ?, ?, ?, ?)').run(username, bcrypt.hashSync(password, 10), name, email, 'employee');
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+    const token = jwt.sign({ id: user.id, username: user.username, name: user.name, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
+    res.json({ token, user: { id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, phone: user.phone || '', department: user.department || '', total_days: user.total_days, used_days: user.used_days }, message: 'Registrazione completata!' });
+  } catch (err) {
+    if (err.message.includes('UNIQUE')) return res.status(400).json({ error: 'Username o email già in uso' });
+    res.status(500).json({ error: 'Errore registrazione' });
+  }
+});
+
 // PROFILE
 app.get('/api/profile', auth, (req, res) => {
   const user = db.prepare('SELECT id, username, name, email, role, phone, department, total_days, used_days FROM users WHERE id = ?').get(req.user.id);
@@ -275,7 +291,7 @@ app.get('/api/export', auth, isManager, (req, res) => {
 });
 
 // HTML Routes
-['/', '/index.html', '/request.html', '/dashboard.html', '/admin.html', '/profile.html', '/calendar.html'].forEach(route => {
+['/', '/index.html', '/register.html', '/request.html', '/dashboard.html', '/admin.html', '/profile.html', '/calendar.html'].forEach(route => {
   app.get(route, (req, res) => res.sendFile(path.join(__dirname, 'public', route === '/' ? 'index.html' : route)));
 });
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
