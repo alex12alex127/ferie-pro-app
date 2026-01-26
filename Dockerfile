@@ -9,7 +9,7 @@ RUN apk add --no-cache python3 make g++
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install --production
+RUN npm install --omit=dev
 
 # Copy app files
 COPY . .
@@ -18,7 +18,7 @@ COPY . .
 RUN mkdir -p /app/data
 
 # Expose port
-EXPOSE 3000
+EXPOSE 3001
 
 # Start server
 CMD ["npm", "start"]
