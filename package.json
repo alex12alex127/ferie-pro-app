@@ -1,7 +1,7 @@
 {
-  "name": "ferie-pro-app",
+  "name": "portal-manager",
   "version": "1.0.0",
-  "description": "Webapp gestione ferie aziendali",
+  "description": "Portal Manager - Gestione aziendale completa",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

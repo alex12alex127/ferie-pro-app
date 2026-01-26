@@ -127,7 +127,7 @@ a:hover { color: var(--primary-dark); }
 }
 
 .sidebar-header h1::before {
-  content: '⚡';
+  content: '🚀';
   font-size: 20px;
 }
 
