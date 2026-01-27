@@ -345,11 +345,42 @@ async function initAdmin() {
   const list = $('#requests-list'), users = $('#users-list'), ft = $('#filter-text'), fs = $('#filter-status');
   let all = [], allUsers = [], sedi = [];
   
-  // Load sedi
+  // Load sedi e utenti per visualizzare dipendenti per sede
   sedi = await API.get('/api/sedi') || [];
+  allUsers = await API.get('/api/users') || [];
+  
   const sedeOptions = '<option value="">Nessuna</option>' + sedi.map(s => `<option value="${s.id}">${esc(s.nome)}</option>`).join('');
   $('#user-sede').innerHTML = sedeOptions;
-  $('#sedi-list').innerHTML = sedi.map(s => `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg-glass);border-radius:var(--radius-xs);margin-bottom:6px"><span>${esc(s.nome)}</span><button class="btn-sm btn-ghost" onclick="delSede(${s.id})">×</button></div>`).join('') || '<p style="color:var(--text-muted);font-size:13px">Nessuna sede</p>';
+  
+  // Render sedi con lista dipendenti
+  function renderSedi() {
+    $('#sedi-list').innerHTML = sedi.map(s => {
+      const dipendenti = allUsers.filter(u => u.sede_id === s.id);
+      return `
+        <div style="background:var(--bg-glass);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px;border:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div>
+              <h4 style="margin:0;font-size:15px">📍 ${esc(s.nome)}</h4>
+              <small style="color:var(--text-muted)">${dipendenti.length} dipendent${dipendenti.length === 1 ? 'e' : 'i'}</small>
+            </div>
+            <button class="btn-sm btn-ghost" onclick="delSede(${s.id})" title="Elimina sede">×</button>
+          </div>
+          ${dipendenti.length > 0 ? `
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              ${dipendenti.map(d => `
+                <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:var(--bg-surface);border-radius:20px;font-size:12px">
+                  <span style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;font-size:10px;color:white;font-weight:600">${d.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</span>
+                  ${esc(d.name)}
+                  <span class="badge badge-pending" style="font-size:10px;padding:2px 6px">${d.role}</span>
+                </span>
+              `).join('')}
+            </div>
+          ` : '<p style="margin:0;color:var(--text-muted);font-size:12px;font-style:italic">Nessun dipendente assegnato</p>'}
+        </div>
+      `;
+    }).join('') || '<p style="color:var(--text-muted);font-size:13px">Nessuna sede configurata</p>';
+  }
+  renderSedi();
   
   async function loadReq() { all = await API.get('/api/requests') || []; renderReq(); }
   function renderReq() {
@@ -373,6 +404,8 @@ async function initAdmin() {
         <button class="btn-sm btn-danger" onclick="delUser(${u.id})" style="margin-left:4px">🗑</button>
       </td>
     </tr>`).join('');
+    // Aggiorna anche la lista sedi con i nuovi dipendenti
+    renderSedi();
   }
   
   window.action = async (id, stato) => { await API.patch(`/api/requests/${id}/status`, { stato }); loadReq(); };
