@@ -27,84 +27,145 @@
         <button class="menu-toggle" onclick="toggleMenu()">☰</button>
         <div class="topbar-left">
           <h2 id="greeting">Buongiorno</h2>
-          <p>Panoramica attività aziendali</p>
+          <p>La tua area personale</p>
         </div>
         <div></div>
       </header>
       
       <div class="container">
-        <!-- Overview Stats -->
-        <div class="overview-card" style="margin-bottom:24px">
-          <h3>Panoramica Richieste</h3>
-          <p>Riepilogo delle richieste ferie del team</p>
-          <div class="overview-stats">
-            <div class="stat-item">
-              <div class="value" id="kpi-total">0</div>
-              <div class="label">Totale</div>
+        <!-- Ferie Counter (visibile a tutti) -->
+        <div class="days-counter" style="margin-bottom:16px">
+          <div id="days-info"></div>
+          <div class="days-bar-bg">
+            <div class="days-bar" id="days-bar" style="width:0%"></div>
+          </div>
+        </div>
+        
+        <!-- Stats Manager/Admin -->
+        <div id="manager-section" class="hidden">
+          <div class="overview-card" style="margin-bottom:16px">
+            <h3>Panoramica Team</h3>
+            <p>Riepilogo richieste ferie</p>
+            <div class="overview-stats">
+              <div class="stat-item">
+                <div class="value" id="kpi-total">0</div>
+                <div class="label">Totale</div>
+              </div>
+              <div class="stat-item">
+                <div class="value" id="kpi-pending">0</div>
+                <div class="label">In Attesa</div>
+              </div>
+              <div class="stat-item">
+                <div class="value" id="kpi-approved">0</div>
+                <div class="label">Approvate</div>
+              </div>
+              <div class="stat-item">
+                <div class="value" id="kpi-month">0</div>
+                <div class="label">Mese</div>
+              </div>
             </div>
-            <div class="stat-item">
-              <div class="value" id="kpi-pending">0</div>
-              <div class="label">In Attesa</div>
+          </div>
+          
+          <!-- Requests Table -->
+          <div class="card" style="margin-bottom:16px">
+            <h3>Gestione Richieste</h3>
+            
+            <div class="filters">
+              <div class="form-group">
+                <label>Cerca</label>
+                <input type="text" id="filter-text" placeholder="Nome, email...">
+              </div>
+              <div class="form-group">
+                <label>Stato</label>
+                <select id="filter-status">
+                  <option value="">Tutti</option>
+                  <option>In attesa</option>
+                  <option>Approvata</option>
+                  <option>Rifiutata</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Da</label>
+                <input type="date" id="filter-from">
+              </div>
+              <div class="form-group">
+                <label>A</label>
+                <input type="date" id="filter-to">
+              </div>
             </div>
-            <div class="stat-item">
-              <div class="value" id="kpi-approved">0</div>
-              <div class="label">Approvate</div>
+            
+            <div class="toolbar">
+              <button id="btn-refresh" class="btn-secondary btn-sm">Aggiorna</button>
+              <button class="btn-ghost btn-sm" onclick="exportData('csv')">CSV</button>
+              <button class="btn-ghost btn-sm" onclick="exportData('json')">JSON</button>
             </div>
-            <div class="stat-item">
-              <div class="value" id="kpi-month">0</div>
-              <div class="label">Questo Mese</div>
+            
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Dipendente</th>
+                    <th class="hide-mobile">Reparto</th>
+                    <th>Periodo</th>
+                    <th>Giorni</th>
+                    <th>Stato</th>
+                    <th>Azioni</th>
+                  </tr>
+                </thead>
+                <tbody id="requests-list"></tbody>
+              </table>
             </div>
           </div>
         </div>
         
-        <!-- Requests Table -->
-        <div class="card">
-          <h3>Gestione Richieste</h3>
-          
-          <div class="filters">
-            <div class="form-group">
-              <label>Cerca dipendente</label>
-              <input type="text" id="filter-text" placeholder="Nome, email, reparto...">
-            </div>
-            <div class="form-group">
-              <label>Stato</label>
-              <select id="filter-status">
-                <option value="">Tutti gli stati</option>
-                <option>In attesa</option>
-                <option>Approvata</option>
-                <option>Rifiutata</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Data inizio</label>
-              <input type="date" id="filter-from">
-            </div>
-            <div class="form-group">
-              <label>Data fine</label>
-              <input type="date" id="filter-to">
-            </div>
+        <!-- Profile Section (visibile a tutti) -->
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>Il Mio Profilo</h3>
+            <div id="profile-alert" class="alert hidden"></div>
+            
+            <form id="profile-form">
+              <div class="form-group">
+                <label>Nome</label>
+                <input type="text" name="name" required>
+              </div>
+              <div class="form-group">
+                <label>Email</label>
+                <input type="email" name="email" readonly>
+              </div>
+              <div class="row row-2">
+                <div class="form-group">
+                  <label>Telefono</label>
+                  <input type="tel" name="phone" placeholder="Telefono">
+                </div>
+                <div class="form-group">
+                  <label>Reparto</label>
+                  <input type="text" name="department" placeholder="Reparto">
+                </div>
+              </div>
+              <button type="submit">Salva</button>
+            </form>
           </div>
           
-          <div class="toolbar">
-            <button id="btn-refresh" class="btn-secondary btn-sm">Aggiorna</button>
-            <button class="btn-ghost btn-sm" onclick="exportData('csv')">Esporta CSV</button>
-            <button class="btn-ghost btn-sm" onclick="exportData('json')">Esporta JSON</button>
-          </div>
-          
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Dipendente</th>
-                  <th class="hide-mobile">Reparto</th>
-                  <th>Periodo</th>
-                  <th>Giorni</th>
-                  <th>Stato</th>
-                  <th>Azioni</th>
-                </tr>
-              </thead>
-              <tbody id="requests-list"></tbody>
-            </table>
+          <div class="card">
+            <h3>Cambia Password</h3>
+            <div id="password-alert" class="alert hidden"></div>
+            
+            <form id="password-form">
+              <div class="form-group">
+                <label>Password Attuale</label>
+                <input type="password" name="oldPassword" required placeholder="Password attuale">
+              </div>
+              <div class="form-group">
+                <label>Nuova Password</label>
+                <input type="password" name="newPassword" required placeholder="Min. 6 caratteri" minlength="6">
+              </div>
+              <div class="form-group">
+                <label>Conferma</label>
+                <input type="password" name="confirmPassword" required placeholder="Ripeti password">
+              </div>
+              <button type="submit">Aggiorna</button>
+            </form>
           </div>
         </div>
       </div>

@@ -33,19 +33,16 @@ function renderNav(active) {
   
   const sections = [
     { title: 'Principale', items: [
+      { k: 'dashboard', l: 'Dashboard', h: '/dashboard.html', i: '🏠' },
       { k: 'request', l: 'Richiedi Ferie', h: '/request.html', i: '✈️' },
       { k: 'calendar', l: 'Calendario', h: '/calendar.html', i: '📆' },
     ]},
     { title: 'Operativo', items: [
       { k: 'cantieri', l: 'Cantieri', h: '/cantieri.html', i: '🏗️', m: true },
-      { k: 'avvisi', l: 'Bacheca Avvisi', h: '/avvisi.html', i: '📣' },
+      { k: 'avvisi', l: 'Avvisi', h: '/avvisi.html', i: '📣' },
     ]},
     { title: 'Gestione', items: [
-      { k: 'dashboard', l: 'Dashboard', h: '/dashboard.html', i: '📊', m: true },
-      { k: 'admin', l: 'Amministrazione', h: '/admin.html', i: '⚙️', a: true },
-    ]},
-    { title: 'Account', items: [
-      { k: 'profile', l: 'Profilo', h: '/profile.html', i: '👤' },
+      { k: 'admin', l: 'Admin', h: '/admin.html', i: '⚙️', a: true },
     ]}
   ];
   
@@ -130,37 +127,70 @@ async function initRequest() {
   load();
 }
 
-// DASHBOARD
+// DASHBOARD (unificata con Profilo)
 async function initDashboard() {
-  if (!Auth.requireAuth() || !Auth.requireRole(['manager', 'admin'])) return;
+  if (!Auth.requireAuth()) return;
   renderNav('dashboard');
+  
+  const user = Auth.getUser();
+  const isM = ['manager', 'admin'].includes(user.role);
   
   // Saluto dinamico
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Buongiorno' : hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
-  const user = Auth.getUser();
   $('#greeting').textContent = `${greeting}, ${user.name.split(' ')[0]}`;
   
-  const list = $('#requests-list'), ft = $('#filter-text'), fs = $('#filter-status'), ff = $('#filter-from'), fto = $('#filter-to');
-  let all = [];
-  async function load() {
-    const [stats, data] = await Promise.all([API.get('/api/stats'), API.get('/api/requests')]);
-    $('#kpi-total').textContent = stats.total;
-    $('#kpi-pending').textContent = stats.pending;
-    $('#kpi-approved').textContent = stats.approved;
-    $('#kpi-month').textContent = stats.thisMonth;
-    all = data || []; render();
+  // Carica profilo e giorni ferie
+  const profile = await API.get('/api/profile');
+  $('#days-info').innerHTML = `<b>${profile.total_days - profile.used_days}</b> giorni ferie rimanenti su ${profile.total_days}`;
+  $('#days-bar').style.width = `${((profile.total_days - profile.used_days) / profile.total_days) * 100}%`;
+  
+  // Form profilo
+  const pf = $('#profile-form'), palert = $('#profile-alert');
+  pf.name.value = profile.name; pf.email.value = profile.email; pf.phone.value = profile.phone || ''; pf.department.value = profile.department || '';
+  pf.addEventListener('submit', async e => {
+    e.preventDefault(); palert.classList.add('hidden');
+    try { 
+      await API.patch('/api/profile', { name: pf.name.value, phone: pf.phone.value, department: pf.department.value }); 
+      palert.textContent = 'Salvato!'; palert.className = 'alert alert-success'; palert.classList.remove('hidden'); 
+      user.name = pf.name.value; Auth.setAuth(Auth.getToken(), user);
+      $('#user-name').textContent = user.name;
+    } catch { palert.textContent = 'Errore'; palert.className = 'alert alert-error'; palert.classList.remove('hidden'); }
+  });
+  
+  // Form password
+  const cp = $('#password-form'), cpalert = $('#password-alert');
+  cp.addEventListener('submit', async e => {
+    e.preventDefault(); cpalert.classList.add('hidden');
+    if (cp.newPassword.value !== cp.confirmPassword.value) { cpalert.textContent = 'Password non coincidono'; cpalert.className = 'alert alert-error'; cpalert.classList.remove('hidden'); return; }
+    try { await API.post('/api/change-password', { oldPassword: cp.oldPassword.value, newPassword: cp.newPassword.value }); cpalert.textContent = 'Password cambiata!'; cpalert.className = 'alert alert-success'; cpalert.classList.remove('hidden'); cp.reset(); }
+    catch { cpalert.textContent = 'Errore'; cpalert.className = 'alert alert-error'; cpalert.classList.remove('hidden'); }
+  });
+  
+  // Sezione Manager/Admin
+  if (isM) {
+    $('#manager-section').classList.remove('hidden');
+    const list = $('#requests-list'), ft = $('#filter-text'), fs = $('#filter-status'), ff = $('#filter-from'), fto = $('#filter-to');
+    let all = [];
+    async function load() {
+      const [stats, data] = await Promise.all([API.get('/api/stats'), API.get('/api/requests')]);
+      $('#kpi-total').textContent = stats.total;
+      $('#kpi-pending').textContent = stats.pending;
+      $('#kpi-approved').textContent = stats.approved;
+      $('#kpi-month').textContent = stats.thisMonth;
+      all = data || []; render();
+    }
+    function render() {
+      const q = (ft.value || '').toLowerCase(), st = fs.value, from = ff.value, to = fto.value;
+      const f = all.filter(r => (!q || [r.nome, r.email, r.reparto].join(' ').toLowerCase().includes(q)) && (!st || r.stato === st) && (!from || r.inizio >= from) && (!to || r.fine <= to));
+      list.innerHTML = f.length ? f.map(r => `<tr><td><b>${esc(r.nome)}</b><br><small>${esc(r.email)}</small></td><td class="hide-mobile">${esc(r.reparto || '-')}</td><td>${esc(r.inizio)} → ${esc(r.fine)}</td><td>${r.giorni}g</td><td><span class="badge ${badge(r.stato)}">${esc(r.stato)}</span></td><td><button class="btn-sm btn-secondary" onclick="action(${r.id},'Approvata')">✓</button> <button class="btn-sm btn-ghost" onclick="action(${r.id},'Rifiutata')">✗</button></td></tr>`).join('') : '<tr><td colspan="6">Nessuna.</td></tr>';
+    }
+    window.action = async (id, stato) => { await API.patch(`/api/requests/${id}/status`, { stato }); load(); };
+    window.exportData = f => window.open(`/api/export?format=${f}&from=${ff.value}&to=${fto.value}&stato=${fs.value}`);
+    [ft, fs, ff, fto].forEach(el => el.addEventListener('input', render));
+    $('#btn-refresh').addEventListener('click', load);
+    load();
   }
-  function render() {
-    const q = (ft.value || '').toLowerCase(), st = fs.value, from = ff.value, to = fto.value;
-    const f = all.filter(r => (!q || [r.nome, r.email, r.reparto].join(' ').toLowerCase().includes(q)) && (!st || r.stato === st) && (!from || r.inizio >= from) && (!to || r.fine <= to));
-    list.innerHTML = f.length ? f.map(r => `<tr><td><b>${esc(r.nome)}</b><br><small>${esc(r.email)}</small></td><td class="hide-mobile">${esc(r.reparto || '-')}</td><td>${esc(r.inizio)} → ${esc(r.fine)}</td><td>${r.giorni}g</td><td><span class="badge ${badge(r.stato)}">${esc(r.stato)}</span></td><td><button class="btn-sm btn-secondary" onclick="action(${r.id},'Approvata')">✓</button> <button class="btn-sm btn-ghost" onclick="action(${r.id},'Rifiutata')">✗</button></td></tr>`).join('') : '<tr><td colspan="6">Nessuna.</td></tr>';
-  }
-  window.action = async (id, stato) => { await API.patch(`/api/requests/${id}/status`, { stato }); load(); };
-  window.exportData = f => window.open(`/api/export?format=${f}&from=${ff.value}&to=${fto.value}&stato=${fs.value}`);
-  [ft, fs, ff, fto].forEach(el => el.addEventListener('input', render));
-  $('#btn-refresh').addEventListener('click', load);
-  load();
 }
 
 // ADMIN
@@ -192,28 +222,6 @@ async function initAdmin() {
   [ft, fs].forEach(el => el.addEventListener('input', renderReq));
   $('#btn-refresh').addEventListener('click', loadReq);
   loadReq(); loadUsers();
-}
-
-// PROFILE
-async function initProfile() {
-  if (!Auth.requireAuth()) return;
-  renderNav('profile');
-  const profile = await API.get('/api/profile');
-  const f = $('#profile-form'), cp = $('#password-form'), alert = $('#profile-alert'), palert = $('#password-alert');
-  f.name.value = profile.name; f.email.value = profile.email; f.phone.value = profile.phone || ''; f.department.value = profile.department || '';
-  $('#days-info').innerHTML = `<b>${profile.total_days - profile.used_days}</b> giorni rimanenti su ${profile.total_days}`;
-  $('#days-bar').style.width = `${((profile.total_days - profile.used_days) / profile.total_days) * 100}%`;
-  f.addEventListener('submit', async e => {
-    e.preventDefault(); alert.classList.add('hidden');
-    try { await API.patch('/api/profile', { name: f.name.value, phone: f.phone.value, department: f.department.value }); alert.textContent = 'Salvato!'; alert.className = 'alert alert-success'; alert.classList.remove('hidden'); const user = Auth.getUser(); user.name = f.name.value; Auth.setAuth(Auth.getToken(), user); }
-    catch { alert.textContent = 'Errore'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
-  });
-  cp.addEventListener('submit', async e => {
-    e.preventDefault(); palert.classList.add('hidden');
-    if (cp.newPassword.value !== cp.confirmPassword.value) { palert.textContent = 'Password non coincidono'; palert.className = 'alert alert-error'; palert.classList.remove('hidden'); return; }
-    try { await API.post('/api/change-password', { oldPassword: cp.oldPassword.value, newPassword: cp.newPassword.value }); palert.textContent = 'Password cambiata!'; palert.className = 'alert alert-success'; palert.classList.remove('hidden'); cp.reset(); }
-    catch { palert.textContent = 'Errore'; palert.className = 'alert alert-error'; palert.classList.remove('hidden'); }
-  });
 }
 
 // CALENDAR

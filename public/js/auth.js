@@ -19,6 +19,6 @@ const Auth = {
   logout() { this.clearAuth(); window.location.href = '/'; },
   requireAuth() { if (!this.isLoggedIn()) { window.location.href = '/'; return false; } return true; },
   requireRole(roles) { const u = this.getUser(); if (!u || !roles.includes(u.role)) { window.location.href = '/request.html'; return false; } return true; },
-  redirectByRole() { const u = this.getUser(); if (!u) return; window.location.href = { admin: '/admin.html', manager: '/dashboard.html', employee: '/request.html' }[u.role] || '/request.html'; },
+  redirectByRole() { const u = this.getUser(); if (!u) return; window.location.href = '/dashboard.html'; },
   authHeaders() { return { 'Authorization': `Bearer ${this.getToken()}`, 'Content-Type': 'application/json' }; }
 };
