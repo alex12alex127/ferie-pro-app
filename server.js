@@ -545,21 +545,35 @@ app.get('/api/export', auth, isManager, (req, res) => {
   } else res.json(data);
 });
 
-// LOGO / SETTINGS
-const settingsFile = path.join(dataDir, 'settings.json');
-const getSettings = () => {
-  try { return JSON.parse(fs.readFileSync(settingsFile, 'utf8')); } 
-  catch { return { logoUrl: '' }; }
-};
-const saveSettings = (settings) => fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2));
+// LOGO UPLOAD
+const logoPath = path.join(__dirname, 'public', 'logo.png');
 
-app.get('/api/settings/logo', (req, res) => res.json({ logoUrl: getSettings().logoUrl || '' }));
-app.post('/api/settings/logo', auth, isAdmin, (req, res) => {
-  const { logoUrl } = req.body;
-  const settings = getSettings();
-  settings.logoUrl = logoUrl || '';
-  saveSettings(settings);
-  res.json({ message: 'OK' });
+app.get('/api/settings/logo', (req, res) => {
+  const exists = fs.existsSync(logoPath);
+  res.json({ hasLogo: exists, logoUrl: exists ? '/logo.png?t=' + Date.now() : '' });
+});
+
+app.post('/api/settings/logo', auth, isAdmin, express.json({ limit: '5mb' }), (req, res) => {
+  try {
+    const { imageData } = req.body;
+    if (!imageData) return res.status(400).json({ error: 'Nessuna immagine' });
+    
+    // Remove data:image/xxx;base64, prefix
+    const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    
+    fs.writeFileSync(logoPath, buffer);
+    res.json({ message: 'Logo salvato', logoUrl: '/logo.png?t=' + Date.now() });
+  } catch (e) {
+    res.status(500).json({ error: 'Errore nel salvataggio' });
+  }
+});
+
+app.delete('/api/settings/logo', auth, isAdmin, (req, res) => {
+  try {
+    if (fs.existsSync(logoPath)) fs.unlinkSync(logoPath);
+    res.json({ message: 'Logo rimosso' });
+  } catch { res.status(500).json({ error: 'Errore' }); }
 });
 
 // BACKUP & RESTORE

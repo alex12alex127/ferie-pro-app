@@ -61,11 +61,13 @@ async function loadCompanyLogo() {
   try {
     const res = await fetch('/api/settings/logo');
     const data = await res.json();
-    if (data?.logoUrl) {
-      const logo = $('#company-logo');
-      if (logo) {
+    const logo = $('#company-logo');
+    if (logo) {
+      if (data?.hasLogo && data?.logoUrl) {
         logo.src = data.logoUrl;
         logo.style.display = 'block';
+      } else {
+        logo.style.display = 'none';
       }
     }
   } catch {}
@@ -478,27 +480,64 @@ async function initAdmin() {
   
   // Logo functions
   const logoSettings = await API.get('/api/settings/logo');
-  if (logoSettings?.logoUrl) {
-    $('#logo-url').value = logoSettings.logoUrl;
+  if (logoSettings?.hasLogo) {
     $('#preview-logo').src = logoSettings.logoUrl;
+    $('#preview-logo').style.display = 'block';
+    $('#no-logo-text').style.display = 'none';
+    $('#btn-remove-logo').style.display = 'inline-flex';
   }
   
-  window.saveLogo = async () => {
-    const url = $('#logo-url').value.trim();
-    const alert = $('#logo-alert');
-    alert.classList.add('hidden');
-    try {
-      await API.post('/api/settings/logo', { logoUrl: url });
-      alert.textContent = 'Logo salvato! Ricarica la pagina per vedere le modifiche.';
-      alert.className = 'alert alert-success';
-      alert.classList.remove('hidden');
-      if (url) $('#preview-logo').src = url;
-    } catch {
-      alert.textContent = 'Errore nel salvataggio';
-      alert.className = 'alert alert-error';
-      alert.classList.remove('hidden');
+  window.previewLogo = (input) => {
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      if (file.size > 2 * 1024 * 1024) {
+        showLogoAlert('Immagine troppo grande (max 2MB)', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const imageData = e.target.result;
+        try {
+          const res = await API.post('/api/settings/logo', { imageData });
+          $('#preview-logo').src = res.logoUrl;
+          $('#preview-logo').style.display = 'block';
+          $('#no-logo-text').style.display = 'none';
+          $('#btn-remove-logo').style.display = 'inline-flex';
+          showLogoAlert('Logo caricato con successo!', 'success');
+          // Update sidebar logo
+          document.querySelectorAll('.company-logo').forEach(img => {
+            img.src = res.logoUrl;
+            img.style.display = 'block';
+          });
+        } catch {
+          showLogoAlert('Errore nel caricamento', 'error');
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
+  
+  window.removeLogo = async () => {
+    if (!confirm('Rimuovere il logo?')) return;
+    try {
+      await fetch('/api/settings/logo', { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + Auth.getToken() }});
+      $('#preview-logo').style.display = 'none';
+      $('#no-logo-text').style.display = 'block';
+      $('#btn-remove-logo').style.display = 'none';
+      showLogoAlert('Logo rimosso', 'success');
+      document.querySelectorAll('.company-logo').forEach(img => img.style.display = 'none');
+    } catch {
+      showLogoAlert('Errore', 'error');
+    }
+  };
+  
+  function showLogoAlert(msg, type) {
+    const alert = $('#logo-alert');
+    alert.textContent = msg;
+    alert.className = 'alert alert-' + (type === 'error' ? 'error' : 'success');
+    alert.classList.remove('hidden');
+    setTimeout(() => alert.classList.add('hidden'), 3000);
+  }
   
   // Backup functions
   const lastBackup = localStorage.getItem('lastBackup');
