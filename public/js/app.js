@@ -46,7 +46,9 @@ const icons = {
   user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>',
   mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>',
   lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
-  save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>'
+  save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>',
+  hardhat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2z"/><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M4 15v-3a6 6 0 0 1 6-6"/><path d="M14 6a6 6 0 0 1 6 6v3"/></svg>',
+  shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>'
 };
 const icon = (name, size = 18) => `<span class="icon" style="width:${size}px;height:${size}px">${icons[name] || ''}</span>`;
 
@@ -88,6 +90,7 @@ function renderNav(active, hasNotifications = false) {
     ]},
     { title: 'Operativo', items: [
       { k: 'cantieri', l: 'Cantieri', h: '/cantieri.html', i: 'building', m: true },
+      { k: 'dpi', l: 'DPI', h: '/dpi.html', i: 'shield' },
     ]},
     { title: 'Account', items: [
       { k: 'settings', l: 'Impostazioni', h: '/settings.html', i: 'user' },
@@ -831,5 +834,285 @@ async function initSettings() {
     const theme = $('#theme-select').value;
     localStorage.setItem('theme', theme);
     // Per ora solo salva, implementazione tema chiaro futura
+  };
+}
+
+// DPI (Dispositivi Protezione Individuale)
+async function initDPI() {
+  if (!Auth.requireAuth()) return;
+  renderNav('dpi');
+  
+  const user = Auth.getUser();
+  const isManager = ['admin', 'manager'].includes(user.role);
+  
+  // Hide manager-only elements for employees
+  if (!isManager) {
+    $('#form-card')?.remove();
+    $('#tab-catalogo')?.remove();
+  }
+  
+  let catalogo = [];
+  let users = [];
+  let assegnazioni = [];
+  
+  // Load data
+  async function loadData() {
+    catalogo = await API.get('/api/dpi/catalogo');
+    assegnazioni = await API.get('/api/dpi/assegnazioni');
+    if (isManager) {
+      users = await API.get('/api/users');
+    }
+  }
+  
+  await loadData();
+  
+  // Populate selects
+  function populateSelects() {
+    // Users dropdown
+    const filterUser = $('#filter-user');
+    const selectUser = $('#select-user');
+    
+    if (isManager) {
+      users.forEach(u => {
+        filterUser.innerHTML += `<option value="${u.id}">${u.nome} ${u.cognome}</option>`;
+        if (selectUser) selectUser.innerHTML += `<option value="${u.id}">${u.nome} ${u.cognome}</option>`;
+      });
+    }
+    
+    // DPI dropdown
+    const selectDpi = $('#select-dpi');
+    if (selectDpi) {
+      const byCategoria = {};
+      catalogo.forEach(d => {
+        if (!byCategoria[d.categoria]) byCategoria[d.categoria] = [];
+        byCategoria[d.categoria].push(d);
+      });
+      Object.entries(byCategoria).forEach(([cat, items]) => {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = cat;
+        items.forEach(d => {
+          const opt = document.createElement('option');
+          opt.value = d.id;
+          opt.textContent = d.nome;
+          opt.dataset.taglie = d.taglia_disponibili || 'Unica';
+          optgroup.appendChild(opt);
+        });
+        selectDpi.appendChild(optgroup);
+      });
+    }
+  }
+  populateSelects();
+  
+  // Update taglie when DPI changes
+  window.updateTaglie = () => {
+    const select = $('#select-dpi');
+    const taglieSelect = $('#select-taglia');
+    const opt = select.options[select.selectedIndex];
+    const taglie = opt?.dataset?.taglie?.split(',') || ['Unica'];
+    
+    taglieSelect.innerHTML = taglie.map(t => `<option value="${t.trim()}">${t.trim()}</option>`).join('');
+  };
+  
+  // Render assegnazioni
+  function renderAssegnazioni() {
+    const container = $('#assegnazioni-list');
+    const filterVal = $('#filter-user').value;
+    
+    let filtered = assegnazioni;
+    if (filterVal) filtered = assegnazioni.filter(a => a.user_id == filterVal);
+    
+    if (filtered.length === 0) {
+      container.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">Nessun DPI assegnato</p>';
+      return;
+    }
+    
+    // Group by user
+    const byUser = {};
+    filtered.forEach(a => {
+      const key = `${a.dipendente_nome} ${a.dipendente_cognome}`;
+      if (!byUser[key]) byUser[key] = [];
+      byUser[key].push(a);
+    });
+    
+    container.innerHTML = Object.entries(byUser).map(([name, items]) => `
+      <div class="dpi-user-card" style="background:var(--bg-glass);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:13px">
+            ${name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2)}
+          </div>
+          <strong>${name}</strong>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          ${items.map(a => {
+            const scaduto = a.data_scadenza && new Date(a.data_scadenza) < new Date();
+            const scadeBrv = a.data_scadenza && new Date(a.data_scadenza) < new Date(Date.now() + 30*24*60*60*1000);
+            return `
+              <div class="dpi-item" style="background:var(--bg-card);border:1px solid ${scaduto ? 'var(--danger)' : scadeBrv ? 'var(--warning)' : 'var(--border)'};border-radius:8px;padding:10px 14px;font-size:13px;position:relative">
+                <div style="font-weight:500">${a.dpi_nome}</div>
+                <div style="color:var(--text-muted);font-size:11px;margin-top:2px">
+                  ${a.taglia ? `Tg. ${a.taglia}` : ''} ${a.quantita > 1 ? `x${a.quantita}` : ''}
+                </div>
+                <div style="color:var(--text-muted);font-size:10px;margin-top:4px">
+                  Consegna: ${new Date(a.data_consegna).toLocaleDateString('it-IT')}
+                  ${a.data_scadenza ? `<br>Scadenza: ${new Date(a.data_scadenza).toLocaleDateString('it-IT')}` : ''}
+                </div>
+                ${scaduto ? '<span style="position:absolute;top:6px;right:6px;width:8px;height:8px;background:var(--danger);border-radius:50%"></span>' : ''}
+                ${isManager ? `<button onclick="delAssegnazione(${a.id})" style="position:absolute;bottom:6px;right:6px;background:none;border:none;color:var(--danger);cursor:pointer;padding:2px" title="Rimuovi">${icon('x', 14)}</button>` : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+  renderAssegnazioni();
+  
+  // Filter change
+  $('#filter-user').addEventListener('change', renderAssegnazioni);
+  
+  // Render catalogo
+  function renderCatalogo() {
+    const container = $('#catalogo-list');
+    if (!container) return;
+    
+    const byCategoria = {};
+    catalogo.forEach(d => {
+      if (!byCategoria[d.categoria]) byCategoria[d.categoria] = [];
+      byCategoria[d.categoria].push(d);
+    });
+    
+    container.innerHTML = Object.entries(byCategoria).map(([cat, items]) => `
+      <div style="margin-bottom:20px">
+        <h4 style="color:var(--primary-light);font-size:13px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">${cat}</h4>
+        ${items.map(d => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg-glass);border:1px solid var(--border);border-radius:8px;margin-bottom:8px">
+            <div>
+              <div style="font-weight:500">${d.nome}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${d.descrizione || ''} • Taglie: ${d.taglia_disponibili}</div>
+            </div>
+            <button onclick="delDpi(${d.id})" class="btn-ghost btn-sm" style="color:var(--danger)">${icon('trash', 14)}</button>
+          </div>
+        `).join('')}
+      </div>
+    `).join('');
+  }
+  if (isManager) renderCatalogo();
+  
+  // Tabs
+  window.showTab = (tab) => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelector(`.tab[onclick="showTab('${tab}')"]`)?.classList.add('active');
+    $('#panel-assegnazioni').classList.toggle('hidden', tab !== 'assegnazioni');
+    $('#panel-catalogo')?.classList.toggle('hidden', tab !== 'catalogo');
+  };
+  
+  // Form submit - new assignment
+  const assignForm = $('#assign-form');
+  const alert = $('#alert');
+  if (assignForm) {
+    // Set default date to today
+    assignForm.data_consegna.value = new Date().toISOString().split('T')[0];
+    
+    assignForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      alert.classList.add('hidden');
+      
+      const data = {
+        user_id: parseInt(assignForm.user_id.value),
+        dpi_id: parseInt(assignForm.dpi_id.value),
+        taglia: assignForm.taglia.value,
+        quantita: parseInt(assignForm.quantita.value) || 1,
+        data_consegna: assignForm.data_consegna.value,
+        data_scadenza: assignForm.data_scadenza.value || null,
+        note: assignForm.note.value
+      };
+      
+      try {
+        await API.post('/api/dpi/assegnazioni', data);
+        alert.textContent = 'DPI assegnato con successo!';
+        alert.className = 'alert alert-success';
+        alert.classList.remove('hidden');
+        assignForm.reset();
+        assignForm.data_consegna.value = new Date().toISOString().split('T')[0];
+        await loadData();
+        renderAssegnazioni();
+      } catch (err) {
+        alert.textContent = err.message || 'Errore';
+        alert.className = 'alert alert-error';
+        alert.classList.remove('hidden');
+      }
+    });
+  }
+  
+  // Delete assignment
+  window.delAssegnazione = async (id) => {
+    if (!confirm('Rimuovere questa assegnazione DPI?')) return;
+    await API.delete('/api/dpi/assegnazioni/' + id);
+    await loadData();
+    renderAssegnazioni();
+  };
+  
+  // Catalogo form
+  const catForm = $('#catalogo-form');
+  const alertCat = $('#alert-cat');
+  if (catForm) {
+    catForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      alertCat.classList.add('hidden');
+      
+      try {
+        await API.post('/api/dpi/catalogo', {
+          nome: catForm.nome.value,
+          categoria: catForm.categoria.value,
+          descrizione: catForm.descrizione.value,
+          taglia_disponibili: catForm.taglia_disponibili.value || 'Unica'
+        });
+        alertCat.textContent = 'DPI aggiunto al catalogo!';
+        alertCat.className = 'alert alert-success';
+        alertCat.classList.remove('hidden');
+        catForm.reset();
+        catForm.taglia_disponibili.value = 'Unica';
+        await loadData();
+        renderCatalogo();
+        // Update select
+        const selectDpi = $('#select-dpi');
+        if (selectDpi) {
+          selectDpi.innerHTML = '<option value="">Seleziona DPI...</option>';
+          const byCategoria = {};
+          catalogo.forEach(d => {
+            if (!byCategoria[d.categoria]) byCategoria[d.categoria] = [];
+            byCategoria[d.categoria].push(d);
+          });
+          Object.entries(byCategoria).forEach(([cat, items]) => {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = cat;
+            items.forEach(d => {
+              const opt = document.createElement('option');
+              opt.value = d.id;
+              opt.textContent = d.nome;
+              opt.dataset.taglie = d.taglia_disponibili || 'Unica';
+              optgroup.appendChild(opt);
+            });
+            selectDpi.appendChild(optgroup);
+          });
+        }
+      } catch (err) {
+        alertCat.textContent = err.message || 'Errore';
+        alertCat.className = 'alert alert-error';
+        alertCat.classList.remove('hidden');
+      }
+    });
+  }
+  
+  // Delete DPI from catalogo
+  window.delDpi = async (id) => {
+    if (!confirm('Eliminare questo DPI dal catalogo?')) return;
+    try {
+      await API.delete('/api/dpi/catalogo/' + id);
+      await loadData();
+      renderCatalogo();
+    } catch (err) {
+      alert(err.message || 'Impossibile eliminare: DPI assegnato a dipendenti');
+    }
   };
 }

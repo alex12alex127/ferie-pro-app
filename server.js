@@ -179,7 +179,48 @@ db.exec(`
     attiva INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+  
+  CREATE TABLE IF NOT EXISTS dpi_catalogo (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT NOT NULL,
+    categoria TEXT NOT NULL,
+    descrizione TEXT,
+    taglia_disponibili TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  
+  CREATE TABLE IF NOT EXISTS dpi_assegnazioni (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    dpi_id INTEGER NOT NULL,
+    taglia TEXT,
+    quantita INTEGER DEFAULT 1,
+    data_consegna DATE NOT NULL,
+    data_scadenza DATE,
+    note TEXT,
+    stato TEXT DEFAULT 'attivo',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (dpi_id) REFERENCES dpi_catalogo(id)
+  );
 `);
+
+// Insert default DPI categories if empty
+const dpiCount = db.prepare('SELECT COUNT(*) as c FROM dpi_catalogo').get();
+if (dpiCount.c === 0) {
+  const defaultDpi = [
+    ['Casco protettivo', 'Protezione testa', 'Casco di sicurezza EN 397', 'Unica'],
+    ['Guanti da lavoro', 'Protezione mani', 'Guanti antitaglio', 'S,M,L,XL'],
+    ['Scarpe antinfortunistiche', 'Protezione piedi', 'Scarpe S3 con puntale', '38,39,40,41,42,43,44,45,46'],
+    ['Occhiali protettivi', 'Protezione occhi', 'Occhiali EN 166', 'Unica'],
+    ['Gilet alta visibilità', 'Visibilità', 'Gilet rifrangente classe 2', 'S,M,L,XL,XXL'],
+    ['Cuffie antirumore', 'Protezione udito', 'Cuffie EN 352-1', 'Unica'],
+    ['Mascherina FFP2', 'Protezione vie respiratorie', 'Mascherina filtrante', 'Unica'],
+    ['Imbracatura anticaduta', 'Protezione anticaduta', 'Imbracatura EN 361', 'S/M,L/XL']
+  ];
+  const insertDpi = db.prepare('INSERT INTO dpi_catalogo (nome, categoria, descrizione, taglia_disponibili) VALUES (?, ?, ?, ?)');
+  defaultDpi.forEach(d => insertDpi.run(...d));
+}
 
 // Add sede_id column to users if not exists
 try { db.exec('ALTER TABLE users ADD COLUMN sede_id INTEGER DEFAULT NULL'); } catch {}
@@ -543,6 +584,96 @@ app.get('/api/export', auth, isManager, (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename=export.csv');
     res.send('ID,Nome,Email,Inizio,Fine,Giorni,Tipo,Stato\n' + data.map(r => `${r.id},"${r.nome}","${r.email}",${r.inizio},${r.fine},${r.giorni},"${r.tipo}","${r.stato}"`).join('\n'));
   } else res.json(data);
+});
+
+// DPI CATALOGO
+app.get('/api/dpi/catalogo', auth, (req, res) => {
+  const dpi = db.prepare('SELECT * FROM dpi_catalogo ORDER BY categoria, nome').all();
+  res.json(dpi);
+});
+
+app.post('/api/dpi/catalogo', auth, isManager, (req, res) => {
+  const { nome, categoria, descrizione, taglia_disponibili } = req.body;
+  if (!nome || !categoria) return res.status(400).json({ error: 'Nome e categoria obbligatori' });
+  try {
+    const result = db.prepare('INSERT INTO dpi_catalogo (nome, categoria, descrizione, taglia_disponibili) VALUES (?, ?, ?, ?)').run(nome, categoria, descrizione || '', taglia_disponibili || 'Unica');
+    res.json({ id: result.lastInsertRowid, message: 'DPI aggiunto' });
+  } catch { res.status(500).json({ error: 'Errore creazione DPI' }); }
+});
+
+app.delete('/api/dpi/catalogo/:id', auth, isManager, (req, res) => {
+  const assigned = db.prepare('SELECT COUNT(*) as c FROM dpi_assegnazioni WHERE dpi_id = ? AND stato = ?').get(req.params.id, 'attivo');
+  if (assigned.c > 0) return res.status(400).json({ error: 'DPI assegnato a dipendenti, impossibile eliminare' });
+  db.prepare('DELETE FROM dpi_catalogo WHERE id = ?').run(req.params.id);
+  res.json({ message: 'DPI eliminato' });
+});
+
+// DPI ASSEGNAZIONI
+app.get('/api/dpi/assegnazioni', auth, (req, res) => {
+  const { user_id } = req.query;
+  let query = `
+    SELECT a.*, d.nome as dpi_nome, d.categoria, u.nome as dipendente_nome, u.cognome as dipendente_cognome
+    FROM dpi_assegnazioni a
+    JOIN dpi_catalogo d ON a.dpi_id = d.id
+    JOIN users u ON a.user_id = u.id
+  `;
+  if (user_id) {
+    query += ' WHERE a.user_id = ?';
+    return res.json(db.prepare(query + ' ORDER BY a.data_consegna DESC').all(user_id));
+  }
+  // Managers see all, employees see only their own
+  if (req.user.role === 'employee') {
+    query += ' WHERE a.user_id = ?';
+    return res.json(db.prepare(query + ' ORDER BY a.data_consegna DESC').all(req.user.id));
+  }
+  res.json(db.prepare(query + ' ORDER BY a.data_consegna DESC').all());
+});
+
+app.post('/api/dpi/assegnazioni', auth, isManager, (req, res) => {
+  const { user_id, dpi_id, taglia, quantita, data_consegna, data_scadenza, note } = req.body;
+  if (!user_id || !dpi_id || !data_consegna) return res.status(400).json({ error: 'Dati incompleti' });
+  try {
+    const result = db.prepare(`
+      INSERT INTO dpi_assegnazioni (user_id, dpi_id, taglia, quantita, data_consegna, data_scadenza, note)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(user_id, dpi_id, taglia || '', quantita || 1, data_consegna, data_scadenza || null, note || '');
+    res.json({ id: result.lastInsertRowid, message: 'DPI assegnato' });
+  } catch { res.status(500).json({ error: 'Errore assegnazione' }); }
+});
+
+app.patch('/api/dpi/assegnazioni/:id', auth, isManager, (req, res) => {
+  const { stato, data_scadenza, note } = req.body;
+  const updates = [];
+  const values = [];
+  if (stato) { updates.push('stato = ?'); values.push(stato); }
+  if (data_scadenza !== undefined) { updates.push('data_scadenza = ?'); values.push(data_scadenza); }
+  if (note !== undefined) { updates.push('note = ?'); values.push(note); }
+  if (updates.length === 0) return res.status(400).json({ error: 'Nessun dato da aggiornare' });
+  values.push(req.params.id);
+  db.prepare(`UPDATE dpi_assegnazioni SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+  res.json({ message: 'Aggiornato' });
+});
+
+app.delete('/api/dpi/assegnazioni/:id', auth, isManager, (req, res) => {
+  db.prepare('DELETE FROM dpi_assegnazioni WHERE id = ?').run(req.params.id);
+  res.json({ message: 'Assegnazione eliminata' });
+});
+
+// DPI per dipendente (riepilogo)
+app.get('/api/dpi/dipendente/:id', auth, (req, res) => {
+  const userId = req.params.id;
+  // Employees can only see their own
+  if (req.user.role === 'employee' && req.user.id != userId) {
+    return res.status(403).json({ error: 'Non autorizzato' });
+  }
+  const assegnazioni = db.prepare(`
+    SELECT a.*, d.nome as dpi_nome, d.categoria
+    FROM dpi_assegnazioni a
+    JOIN dpi_catalogo d ON a.dpi_id = d.id
+    WHERE a.user_id = ? AND a.stato = 'attivo'
+    ORDER BY d.categoria, d.nome
+  `).all(userId);
+  res.json(assegnazioni);
 });
 
 // LOGO UPLOAD
