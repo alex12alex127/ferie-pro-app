@@ -53,23 +53,6 @@
               
               <div class="row row-2">
                 <div class="form-group">
-                  <label>Reparto</label>
-                  <select name="reparto">
-                    <option value="">Seleziona reparto</option>
-                    <option>Tecnico</option>
-                    <option>Amministrazione</option>
-                    <option>Produzione</option>
-                    <option>Commerciale</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>Responsabile</label>
-                  <input type="text" name="responsabile" placeholder="Nome del responsabile">
-                </div>
-              </div>
-              
-              <div class="row row-2">
-                <div class="form-group">
                   <label>Data Inizio</label>
                   <input type="date" name="inizio" required>
                 </div>
@@ -84,7 +67,7 @@
               <div class="row row-2">
                 <div class="form-group">
                   <label>Tipo Richiesta</label>
-                  <select name="tipo" required>
+                  <select name="tipo" id="tipo-select" required>
                     <option value="Ferie">Ferie</option>
                     <option value="Permesso">Permesso</option>
                     <option value="Malattia">Malattia</option>
@@ -98,6 +81,15 @@
                     <option value="Alta">Alta</option>
                     <option value="Urgente">Urgente</option>
                   </select>
+                </div>
+              </div>
+              
+              <!-- Codice Malattia (visibile solo se tipo = Malattia) -->
+              <div id="malattia-section" class="hidden" style="margin-bottom:16px">
+                <div class="form-group" style="background:var(--bg-glass);padding:16px;border-radius:var(--radius-sm);border:1px solid var(--border)">
+                  <label style="color:var(--warning)">Codice Malattia (INPS)</label>
+                  <input type="text" name="codice_malattia" id="codice-malattia" placeholder="Inserisci il codice protocollo INPS">
+                  <small style="color:var(--text-muted);display:block;margin-top:6px">Il codice viene rilasciato dal medico curante</small>
                 </div>
               </div>
               

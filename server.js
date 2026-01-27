@@ -184,6 +184,9 @@ db.exec(`
 // Add sede_id column to users if not exists
 try { db.exec('ALTER TABLE users ADD COLUMN sede_id INTEGER DEFAULT NULL'); } catch {}
 
+// Add codice_malattia column to requests if not exists
+try { db.exec('ALTER TABLE requests ADD COLUMN codice_malattia TEXT DEFAULT NULL'); } catch {}
+
 // Default sedi
 const defaultSedi = ['Ferrara', 'Ravenna'];
 const insertSede = db.prepare('INSERT OR IGNORE INTO sedi (nome) VALUES (?)');
@@ -278,10 +281,11 @@ app.get('/api/requests', auth, (req, res) => {
   res.json(req.user.role === 'employee' ? db.prepare(sql).all(req.user.id) : db.prepare(sql).all());
 });
 app.post('/api/requests', auth, (req, res) => {
-  const { nome, email, reparto, responsabile, inizio, fine, tipo, urgenza, motivo } = req.body;
+  const { nome, email, inizio, fine, tipo, urgenza, motivo, codice_malattia } = req.body;
   if (!inizio || !fine) return res.status(400).json({ error: 'Date obbligatorie' });
+  if (tipo === 'Malattia' && !codice_malattia) return res.status(400).json({ error: 'Codice malattia obbligatorio' });
   const giorni = calcDays(inizio, fine);
-  db.prepare('INSERT INTO requests (user_id, nome, email, reparto, responsabile, inizio, fine, giorni, tipo, urgenza, motivo) VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(req.user.id, nome, email, reparto, responsabile, inizio, fine, giorni, tipo, urgenza, motivo);
+  db.prepare('INSERT INTO requests (user_id, nome, email, inizio, fine, giorni, tipo, urgenza, motivo, codice_malattia) VALUES (?,?,?,?,?,?,?,?,?,?)').run(req.user.id, nome, email, inizio, fine, giorni, tipo, urgenza, motivo, codice_malattia || null);
   res.json({ message: 'OK', giorni });
 });
 app.patch('/api/requests/:id/status', auth, isManager, (req, res) => {

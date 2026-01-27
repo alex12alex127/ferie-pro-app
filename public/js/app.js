@@ -148,7 +148,22 @@ async function initRequest() {
   if (!Auth.requireAuth()) return;
   renderNav('request');
   const user = Auth.getUser(), form = $('#request-form'), alert = $('#request-alert'), list = $('#my-requests');
+  const tipoSelect = $('#tipo-select'), malattiaSection = $('#malattia-section'), codiceMalattia = $('#codice-malattia');
+  
   form.nome.value = user.name; form.email.value = user.email;
+  
+  // Toggle codice malattia
+  tipoSelect.addEventListener('change', () => {
+    if (tipoSelect.value === 'Malattia') {
+      malattiaSection.classList.remove('hidden');
+      codiceMalattia.required = true;
+    } else {
+      malattiaSection.classList.add('hidden');
+      codiceMalattia.required = false;
+      codiceMalattia.value = '';
+    }
+  });
+  
   const updateDays = () => {
     const [s, e] = [form.inizio.value, form.fine.value];
     if (s && e) {
@@ -161,9 +176,14 @@ async function initRequest() {
   form.fine.addEventListener('change', updateDays);
   form.addEventListener('submit', async e => {
     e.preventDefault(); alert.classList.add('hidden');
-    const payload = { nome: form.nome.value, email: form.email.value, reparto: form.reparto?.value, responsabile: form.responsabile?.value, inizio: form.inizio.value, fine: form.fine.value, tipo: form.tipo.value, urgenza: form.urgenza.value, motivo: form.motivo?.value };
+    const payload = { nome: form.nome.value, email: form.email.value, inizio: form.inizio.value, fine: form.fine.value, tipo: form.tipo.value, urgenza: form.urgenza.value, motivo: form.motivo?.value };
+    // Aggiungi codice malattia se presente
+    if (form.tipo.value === 'Malattia') {
+      if (!codiceMalattia.value.trim()) { alert.textContent = 'Inserisci il codice malattia'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); return; }
+      payload.codice_malattia = codiceMalattia.value.trim();
+    }
     if (!payload.inizio || !payload.fine || payload.fine < payload.inizio) { alert.textContent = 'Date non valide'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); return; }
-    try { await API.post('/api/requests', payload); alert.textContent = 'Richiesta inviata!'; alert.className = 'alert alert-success'; alert.classList.remove('hidden'); form.reset(); form.nome.value = user.name; form.email.value = user.email; load(); }
+    try { await API.post('/api/requests', payload); alert.textContent = 'Richiesta inviata!'; alert.className = 'alert alert-success'; alert.classList.remove('hidden'); form.reset(); form.nome.value = user.name; form.email.value = user.email; malattiaSection.classList.add('hidden'); load(); }
     catch { alert.textContent = 'Errore'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
   });
   async function load() {
