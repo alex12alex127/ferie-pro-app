@@ -44,14 +44,34 @@
           </div>
         </div>
         
-        <!-- Sede e Ferie Counter (visibile a tutti) -->
-        <div class="days-counter" style="margin-bottom:16px">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-            <div id="days-info"></div>
-            <span id="sede-badge" class="badge badge-pending" style="font-size:12px"></span>
+        <!-- Profile Card con Foto e Meteo -->
+        <div class="grid grid-2" style="margin-bottom:16px">
+          <!-- Profilo Utente -->
+          <div class="card" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+            <div class="profile-avatar" id="profile-avatar" onclick="changeAvatar()" style="cursor:pointer" title="Clicca per cambiare foto">
+              <span id="avatar-initials"></span>
+              <img id="avatar-img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%">
+            </div>
+            <div style="flex:1;min-width:150px">
+              <h3 style="margin:0 0 4px" id="profile-name"></h3>
+              <span id="sede-badge" class="badge badge-pending" style="font-size:11px"></span>
+              <div id="days-info" style="margin-top:8px;font-size:13px"></div>
+              <div class="days-bar-bg" style="margin-top:6px">
+                <div class="days-bar" id="days-bar" style="width:0%"></div>
+              </div>
+            </div>
           </div>
-          <div class="days-bar-bg">
-            <div class="days-bar" id="days-bar" style="width:0%"></div>
+          
+          <!-- Widget Meteo -->
+          <div class="card" id="weather-card">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div id="weather-icon" style="font-size:40px">⛅</div>
+              <div>
+                <div style="font-size:24px;font-weight:600" id="weather-temp">--°C</div>
+                <div style="color:var(--text-secondary);font-size:13px" id="weather-desc">Caricamento...</div>
+                <div style="color:var(--text-muted);font-size:12px" id="weather-city"></div>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -162,12 +182,12 @@
         </div>
         
         <!-- Profile Section (visibile a tutti) -->
-        <div class="grid grid-2">
-          <div class="card">
-            <h3>Il Mio Profilo</h3>
-            <div id="profile-alert" class="alert hidden"></div>
-            
-            <form id="profile-form">
+        <div class="card">
+          <h3>Modifica Profilo</h3>
+          <div id="profile-alert" class="alert hidden"></div>
+          
+          <form id="profile-form">
+            <div class="row row-2">
               <div class="form-group">
                 <label>Nome</label>
                 <input type="text" name="name" required>
@@ -176,40 +196,19 @@
                 <label>Email</label>
                 <input type="email" name="email" readonly>
               </div>
-              <div class="row row-2">
-                <div class="form-group">
-                  <label>Telefono</label>
-                  <input type="tel" name="phone" placeholder="Telefono">
-                </div>
-                <div class="form-group">
-                  <label>Reparto</label>
-                  <input type="text" name="department" placeholder="Reparto">
-                </div>
-              </div>
-              <button type="submit">Salva</button>
-            </form>
-          </div>
-          
-          <div class="card">
-            <h3>Cambia Password</h3>
-            <div id="password-alert" class="alert hidden"></div>
-            
-            <form id="password-form">
+            </div>
+            <div class="row row-2">
               <div class="form-group">
-                <label>Password Attuale</label>
-                <input type="password" name="oldPassword" required placeholder="Password attuale">
+                <label>Telefono</label>
+                <input type="tel" name="phone" placeholder="Telefono">
               </div>
               <div class="form-group">
-                <label>Nuova Password</label>
-                <input type="password" name="newPassword" required placeholder="Min. 6 caratteri" minlength="6">
+                <label>Reparto</label>
+                <input type="text" name="department" placeholder="Reparto">
               </div>
-              <div class="form-group">
-                <label>Conferma</label>
-                <input type="password" name="confirmPassword" required placeholder="Ripeti password">
-              </div>
-              <button type="submit">Aggiorna</button>
-            </form>
-          </div>
+            </div>
+            <button type="submit">Salva Modifiche</button>
+          </form>
         </div>
       </div>
     </main>

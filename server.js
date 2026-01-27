@@ -187,6 +187,9 @@ try { db.exec('ALTER TABLE users ADD COLUMN sede_id INTEGER DEFAULT NULL'); } ca
 // Add codice_malattia column to requests if not exists
 try { db.exec('ALTER TABLE requests ADD COLUMN codice_malattia TEXT DEFAULT NULL'); } catch {}
 
+// Add avatar column to users if not exists
+try { db.exec('ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT NULL'); } catch {}
+
 // Default sedi
 const defaultSedi = ['Ferrara', 'Ravenna'];
 const insertSede = db.prepare('INSERT OR IGNORE INTO sedi (nome) VALUES (?)');
@@ -257,9 +260,12 @@ app.delete('/api/sedi/:id', auth, isAdmin, (req, res) => {
 });
 
 // PROFILE
-app.get('/api/profile', auth, (req, res) => res.json(db.prepare('SELECT u.id, u.username, u.name, u.email, u.role, u.phone, u.department, u.total_days, u.used_days, u.sede_id, s.nome as sede_nome FROM users u LEFT JOIN sedi s ON u.sede_id = s.id WHERE u.id = ?').get(req.user.id)));
+app.get('/api/profile', auth, (req, res) => res.json(db.prepare('SELECT u.id, u.username, u.name, u.email, u.role, u.phone, u.department, u.total_days, u.used_days, u.sede_id, u.avatar, s.nome as sede_nome FROM users u LEFT JOIN sedi s ON u.sede_id = s.id WHERE u.id = ?').get(req.user.id)));
 app.patch('/api/profile', auth, (req, res) => {
-  const { name, phone, department } = req.body;
+  const { name, phone, department, avatar } = req.body;
+  if (avatar !== undefined) {
+    db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(avatar, req.user.id);
+  }
   db.prepare('UPDATE users SET name=COALESCE(?,name), phone=COALESCE(?,phone), department=COALESCE(?,department) WHERE id=?').run(name, phone, department, req.user.id);
   res.json({ message: 'OK' });
 });
@@ -540,7 +546,7 @@ app.get('/api/export', auth, isManager, (req, res) => {
 });
 
 // HTML Routes
-const pages = ['/', '/index.html', '/register.html', '/request.html', '/dashboard.html', '/admin.html', '/calendar.html', '/cantieri.html'];
+const pages = ['/', '/index.html', '/register.html', '/request.html', '/dashboard.html', '/admin.html', '/calendar.html', '/cantieri.html', '/settings.html'];
 pages.forEach(p => app.get(p, (req, res) => res.sendFile(path.join(__dirname, 'public', p === '/' ? 'index.html' : p))));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 

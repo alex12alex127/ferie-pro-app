@@ -773,6 +773,64 @@ textarea {
 
 .hidden { display: none !important; }
 
+/* ============ PROFILE AVATAR ============ */
+.profile-avatar {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  transition: var(--transition);
+  box-shadow: 0 4px 15px var(--primary-glow);
+}
+
+.profile-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 25px var(--primary-glow);
+}
+
+.profile-avatar::after {
+  content: '📷';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0,0,0,0.7);
+  font-size: 12px;
+  padding: 2px;
+  text-align: center;
+  opacity: 0;
+  transition: var(--transition);
+}
+
+.profile-avatar:hover::after {
+  opacity: 1;
+}
+
+.profile-avatar-large {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  font-weight: 700;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 30px var(--primary-glow);
+}
+
 /* ============ TABLES ============ */
 .table-wrap {
   overflow-x: auto;

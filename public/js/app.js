@@ -71,7 +71,8 @@ function renderNav(active, hasNotifications = false) {
     { title: 'Operativo', items: [
       { k: 'cantieri', l: 'Cantieri', h: '/cantieri.html', i: 'building', m: true },
     ]},
-    { title: 'Gestione', items: [
+    { title: 'Account', items: [
+      { k: 'settings', l: 'Impostazioni', h: '/settings.html', i: 'user' },
       { k: 'admin', l: 'Admin', h: '/admin.html', i: 'settings', a: true },
     ]}
   ];
@@ -148,17 +149,20 @@ async function initRequest() {
   if (!Auth.requireAuth()) return;
   renderNav('request');
   const user = Auth.getUser(), form = $('#request-form'), alert = $('#request-alert'), list = $('#my-requests');
-  const tipoSelect = $('#tipo-select'), malattiaSection = $('#malattia-section'), codiceMalattia = $('#codice-malattia');
+  const tipoSelect = $('#tipo-select'), malattiaSection = $('#malattia-section'), codiceMalattia = $('#codice-malattia'), noteSection = $('#note-section');
   
   form.nome.value = user.name; form.email.value = user.email;
   
-  // Toggle codice malattia
+  // Toggle codice malattia e note
   tipoSelect.addEventListener('change', () => {
     if (tipoSelect.value === 'Malattia') {
       malattiaSection.classList.remove('hidden');
+      noteSection.classList.add('hidden');
       codiceMalattia.required = true;
+      form.motivo.value = '';
     } else {
       malattiaSection.classList.add('hidden');
+      noteSection.classList.remove('hidden');
       codiceMalattia.required = false;
       codiceMalattia.value = '';
     }
@@ -276,9 +280,24 @@ async function initDashboard() {
   
   // Carica profilo e giorni ferie
   const profile = await API.get('/api/profile');
-  $('#days-info').innerHTML = `<b>${profile.total_days - profile.used_days}</b> giorni ferie rimanenti su ${profile.total_days}`;
+  $('#days-info').innerHTML = `<b>${profile.total_days - profile.used_days}</b> giorni rimanenti su ${profile.total_days}`;
   $('#days-bar').style.width = `${((profile.total_days - profile.used_days) / profile.total_days) * 100}%`;
   $('#sede-badge').textContent = profile.sede_nome ? `📍 ${profile.sede_nome}` : 'Sede non assegnata';
+  $('#profile-name').textContent = profile.name;
+  
+  // Avatar
+  const initials = profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  $('#avatar-initials').textContent = initials;
+  if (profile.avatar) {
+    $('#avatar-img').src = profile.avatar;
+    $('#avatar-img').style.display = 'block';
+    $('#avatar-initials').style.display = 'none';
+  }
+  
+  window.changeAvatar = () => window.location.href = '/settings.html';
+  
+  // Meteo basato sulla sede
+  loadWeather(profile.sede_nome || 'Ferrara');
   
   // Form profilo
   const pf = $('#profile-form'), palert = $('#profile-alert');
@@ -291,15 +310,6 @@ async function initDashboard() {
       user.name = pf.name.value; Auth.setAuth(Auth.getToken(), user);
       $('#user-name').textContent = user.name;
     } catch { palert.textContent = 'Errore'; palert.className = 'alert alert-error'; palert.classList.remove('hidden'); }
-  });
-  
-  // Form password
-  const cp = $('#password-form'), cpalert = $('#password-alert');
-  cp.addEventListener('submit', async e => {
-    e.preventDefault(); cpalert.classList.add('hidden');
-    if (cp.newPassword.value !== cp.confirmPassword.value) { cpalert.textContent = 'Password non coincidono'; cpalert.className = 'alert alert-error'; cpalert.classList.remove('hidden'); return; }
-    try { await API.post('/api/change-password', { oldPassword: cp.oldPassword.value, newPassword: cp.newPassword.value }); cpalert.textContent = 'Password cambiata!'; cpalert.className = 'alert alert-success'; cpalert.classList.remove('hidden'); cp.reset(); }
-    catch { cpalert.textContent = 'Errore'; cpalert.className = 'alert alert-error'; cpalert.classList.remove('hidden'); }
   });
   
   // Sezione Manager/Admin
@@ -496,3 +506,148 @@ async function initCantieri() {
   load();
 }
 
+// WEATHER
+async function loadWeather(city) {
+  const weatherIcons = {
+    'clear': '☀️', 'sunny': '☀️',
+    'partly': '⛅', 'cloudy': '☁️', 'overcast': '☁️',
+    'rain': '🌧️', 'drizzle': '🌧️', 'shower': '🌧️',
+    'thunder': '⛈️', 'storm': '⛈️',
+    'snow': '❄️', 'sleet': '🌨️',
+    'fog': '🌫️', 'mist': '🌫️',
+    'wind': '💨'
+  };
+  
+  try {
+    // Usa Open-Meteo (gratuito, no API key)
+    const cityCoords = {
+      'Ferrara': { lat: 44.84, lon: 11.62 },
+      'Ravenna': { lat: 44.42, lon: 12.20 },
+      'Bologna': { lat: 44.49, lon: 11.34 },
+      'Milano': { lat: 45.46, lon: 9.19 },
+      'Roma': { lat: 41.89, lon: 12.48 }
+    };
+    
+    const coords = cityCoords[city] || cityCoords['Ferrara'];
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,weather_code&timezone=Europe/Rome`);
+    const data = await res.json();
+    
+    const temp = Math.round(data.current.temperature_2m);
+    const code = data.current.weather_code;
+    
+    // Weather codes mapping
+    let desc = 'Sereno', icon = '☀️';
+    if (code === 0) { desc = 'Sereno'; icon = '☀️'; }
+    else if (code <= 3) { desc = 'Parzialmente nuvoloso'; icon = '⛅'; }
+    else if (code <= 49) { desc = 'Nebbia'; icon = '🌫️'; }
+    else if (code <= 59) { desc = 'Pioggia leggera'; icon = '🌧️'; }
+    else if (code <= 69) { desc = 'Pioggia'; icon = '🌧️'; }
+    else if (code <= 79) { desc = 'Neve'; icon = '❄️'; }
+    else if (code <= 84) { desc = 'Pioggia intensa'; icon = '🌧️'; }
+    else if (code <= 94) { desc = 'Neve intensa'; icon = '❄️'; }
+    else { desc = 'Temporale'; icon = '⛈️'; }
+    
+    $('#weather-icon').textContent = icon;
+    $('#weather-temp').textContent = `${temp}°C`;
+    $('#weather-desc').textContent = desc;
+    $('#weather-city').textContent = `📍 ${city}`;
+  } catch {
+    $('#weather-icon').textContent = '⛅';
+    $('#weather-temp').textContent = '--°C';
+    $('#weather-desc').textContent = 'Non disponibile';
+    $('#weather-city').textContent = city;
+  }
+}
+
+// SETTINGS
+async function initSettings() {
+  if (!Auth.requireAuth()) return;
+  renderNav('settings');
+  
+  const profile = await API.get('/api/profile');
+  const initials = profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  
+  // Avatar preview
+  $('#settings-avatar-initials').textContent = initials;
+  if (profile.avatar) {
+    $('#avatar-url').value = profile.avatar;
+    $('#settings-avatar-img').src = profile.avatar;
+    $('#settings-avatar-img').style.display = 'block';
+    $('#settings-avatar-initials').style.display = 'none';
+  }
+  
+  // Preview on URL change
+  $('#avatar-url').addEventListener('input', () => {
+    const url = $('#avatar-url').value;
+    if (url) {
+      $('#settings-avatar-img').src = url;
+      $('#settings-avatar-img').style.display = 'block';
+      $('#settings-avatar-initials').style.display = 'none';
+    } else {
+      $('#settings-avatar-img').style.display = 'none';
+      $('#settings-avatar-initials').style.display = 'flex';
+    }
+  });
+  
+  // Save avatar
+  window.saveAvatar = async () => {
+    const url = $('#avatar-url').value.trim();
+    const alert = $('#avatar-alert');
+    alert.classList.add('hidden');
+    try {
+      await API.patch('/api/profile', { avatar: url || null });
+      alert.textContent = 'Foto salvata!';
+      alert.className = 'alert alert-success';
+      alert.classList.remove('hidden');
+    } catch {
+      alert.textContent = 'Errore nel salvataggio';
+      alert.className = 'alert alert-error';
+      alert.classList.remove('hidden');
+    }
+  };
+  
+  // Remove avatar
+  window.removeAvatar = async () => {
+    $('#avatar-url').value = '';
+    $('#settings-avatar-img').style.display = 'none';
+    $('#settings-avatar-initials').style.display = 'flex';
+    await API.patch('/api/profile', { avatar: null });
+    $('#avatar-alert').textContent = 'Foto rimossa';
+    $('#avatar-alert').className = 'alert alert-success';
+    $('#avatar-alert').classList.remove('hidden');
+  };
+  
+  // Password form
+  const cp = $('#password-form'), cpalert = $('#password-alert');
+  cp.addEventListener('submit', async e => {
+    e.preventDefault();
+    cpalert.classList.add('hidden');
+    if (cp.newPassword.value !== cp.confirmPassword.value) {
+      cpalert.textContent = 'Le password non coincidono';
+      cpalert.className = 'alert alert-error';
+      cpalert.classList.remove('hidden');
+      return;
+    }
+    try {
+      await API.post('/api/change-password', { oldPassword: cp.oldPassword.value, newPassword: cp.newPassword.value });
+      cpalert.textContent = 'Password aggiornata!';
+      cpalert.className = 'alert alert-success';
+      cpalert.classList.remove('hidden');
+      cp.reset();
+    } catch {
+      cpalert.textContent = 'Password attuale errata';
+      cpalert.className = 'alert alert-error';
+      cpalert.classList.remove('hidden');
+    }
+  });
+  
+  // Theme
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  $('#theme-select').value = savedTheme;
+  
+  window.saveTheme = () => {
+    const theme = $('#theme-select').value;
+    localStorage.setItem('theme', theme);
+    // Per ora solo salva, implementazione tema chiaro futura
+  };
+}
