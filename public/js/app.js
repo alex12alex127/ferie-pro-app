@@ -634,6 +634,21 @@ async function initCalendar() {
   let currentDate = new Date();
   const calendar = $('#calendar-grid'), monthLabel = $('#month-label');
   const months = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+  
+  // Icone per tipo richiesta
+  const tipoIcon = {
+    'Ferie': '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>',
+    'Malattia': '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4m8-4v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M12 10v4m-2-2h4"/></svg>',
+    'Permesso': '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+    'ROL': '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>'
+  };
+  const tipoColor = {
+    'Ferie': 'cal-ferie',
+    'Malattia': 'cal-malattia',
+    'Permesso': 'cal-permesso',
+    'ROL': 'cal-rol'
+  };
+  
   async function render() {
     const year = currentDate.getFullYear(), month = currentDate.getMonth() + 1;
     monthLabel.textContent = `${months[month - 1]} ${year}`;
@@ -646,7 +661,17 @@ async function initCalendar() {
       const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       const dayEvents = events.filter(e => dateStr >= e.inizio && dateStr <= e.fine);
       const isWeekend = new Date(year, month - 1, d).getDay() % 6 === 0, isToday = new Date().toISOString().slice(0, 10) === dateStr;
-      html += `<div class="cal-day${isWeekend ? ' weekend' : ''}${isToday ? ' today' : ''}"><span class="day-num">${d}</span>${dayEvents.map(e => `<div class="cal-event">${esc(e.nome.split(' ')[0])}</div>`).join('')}</div>`;
+      const eventsHtml = dayEvents.map(e => {
+        const tipo = e.tipo || 'Ferie';
+        const colorClass = tipoColor[tipo] || 'cal-ferie';
+        const iconSvg = tipoIcon[tipo] || tipoIcon['Ferie'];
+        const nome = e.nome.split(' ')[0]; // Solo il primo nome
+        return `<div class="cal-event ${colorClass}" title="${esc(e.nome)} - ${tipo}">
+          <span class="cal-icon">${iconSvg}</span>
+          <span class="cal-nome">${esc(nome)}</span>
+        </div>`;
+      }).join('');
+      html += `<div class="cal-day${isWeekend ? ' weekend' : ''}${isToday ? ' today' : ''}"><span class="day-num">${d}</span><div class="cal-events">${eventsHtml}</div></div>`;
     }
     calendar.innerHTML = html;
   }

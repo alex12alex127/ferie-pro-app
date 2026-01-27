@@ -1186,12 +1186,14 @@ td small {
 .cal-day {
   min-height: 100px;
   min-width: 0;
-  padding: 12px;
+  padding: 8px;
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-xs);
   transition: var(--transition);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .cal-day:hover {
@@ -1219,19 +1221,75 @@ td small {
   font-weight: 600;
   font-size: 14px;
   color: var(--text);
+  flex-shrink: 0;
+}
+
+/* Container per eventi del giorno */
+.cal-events {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
 }
 
 .cal-event {
-  margin-top: 8px;
-  padding: 4px 8px;
-  background: var(--success-bg);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  color: var(--success);
-  font-size: 11px;
-  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 4px;
+  font-size: 10px;
+  border-radius: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  min-width: 0;
+  cursor: default;
+}
+
+.cal-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cal-icon svg {
+  width: 10px;
+  height: 10px;
+}
+
+.cal-nome {
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Colori per tipo */
+.cal-ferie {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+  border-left: 2px solid #10b981;
+}
+
+.cal-malattia {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+  border-left: 2px solid #ef4444;
+}
+
+.cal-permesso {
+  background: rgba(59, 130, 246, 0.15);
+  color: #2563eb;
+  border-left: 2px solid #3b82f6;
+}
+
+.cal-rol {
+  background: rgba(168, 85, 247, 0.15);
+  color: #7c3aed;
+  border-left: 2px solid #a855f7;
 }
 
 /* ============ PROFILE ============ */
@@ -1528,7 +1586,9 @@ td small {
   .cal-header { padding: 6px 2px; font-size: 9px; }
   .cal-day { min-height: 45px; padding: 4px; }
   .day-num { font-size: 11px; }
-  .cal-event { font-size: 8px; padding: 2px 4px; margin-top: 4px; }
+  .cal-events { gap: 1px; max-height: calc(100% - 18px); }
+  .cal-event { font-size: 8px; padding: 1px 2px; gap: 2px; }
+  .cal-icon svg { width: 8px; height: 8px; }
   
   /* Profile - Compact */
   .days-counter {
@@ -1595,7 +1655,10 @@ td small {
   .calendar-header { flex-direction: column; gap: 8px; text-align: center; }
   .cal-day { min-height: 36px; }
   .day-num { font-size: 10px; }
-  .cal-event { display: none; }
+  .cal-events { gap: 1px; }
+  .cal-event { padding: 1px 2px; }
+  .cal-nome { display: none; }
+  .cal-icon svg { width: 8px; height: 8px; }
   
   .days-counter b { font-size: 28px; }
   
