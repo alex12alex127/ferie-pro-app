@@ -75,6 +75,19 @@
   padding: 0;
 }
 
+/* SVG Icons */
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon svg {
+  width: 100%;
+  height: 100%;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -235,11 +248,19 @@ body::before {
 }
 
 .sidebar-nav a .icon {
-  width: 24px;
-  font-size: 18px;
-  text-align: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
   position: relative;
   z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-nav a .icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .sidebar-nav a span:not(.icon) {
@@ -271,7 +292,7 @@ body::before {
 .sidebar-user .btn-logout {
   margin-top: 16px;
   width: 100%;
-  padding: 12px;
+  padding: 10px 12px;
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text-secondary);
@@ -280,6 +301,15 @@ body::before {
   font-size: 13px;
   font-weight: 500;
   transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.sidebar-user .btn-logout .icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .sidebar-user .btn-logout:hover {
@@ -333,10 +363,15 @@ body::before {
   background: var(--bg-glass);
   border: 1px solid var(--border);
   border-radius: var(--radius-xs);
-  font-size: 20px;
   cursor: pointer;
   color: var(--text);
   transition: var(--transition);
+  padding: 10px;
+}
+
+.menu-toggle svg {
+  width: 100%;
+  height: 100%;
 }
 
 .menu-toggle:hover {
