@@ -1054,18 +1054,21 @@ td small {
 
 @media (max-width: 768px) {
   :root {
-    --sidebar-width: 300px;
-    --topbar-height: 64px;
+    --sidebar-width: 280px;
+    --topbar-height: 56px;
+    --radius: 10px;
+    --radius-sm: 8px;
+    --radius-xs: 6px;
   }
+  
+  body { font-size: 13px; }
   
   .sidebar {
     transform: translateX(-100%);
     box-shadow: var(--shadow-lg);
   }
   
-  .sidebar.open {
-    transform: translateX(0);
-  }
+  .sidebar.open { transform: translateX(0); }
   
   .sidebar-overlay {
     display: none;
@@ -1076,83 +1079,135 @@ td small {
     z-index: 999;
   }
   
-  .sidebar-overlay.open {
-    display: block;
-  }
+  .sidebar-overlay.open { display: block; }
   
-  .main-content {
-    margin-left: 0;
-  }
+  .sidebar-header { padding: 16px; }
+  .sidebar-header h1 { font-size: 18px; }
+  .sidebar-header small { font-size: 11px; }
+  
+  .sidebar-nav { padding: 12px; }
+  .nav-section { margin-bottom: 16px; }
+  .nav-section-title { padding: 0 8px 8px; font-size: 9px; }
+  .sidebar-nav a { padding: 10px 12px; font-size: 13px; gap: 10px; }
+  .sidebar-nav a .icon { width: 20px; font-size: 15px; }
+  
+  .sidebar-user { padding: 12px; margin: 8px 12px 12px; }
+  .sidebar-user .user-name { font-size: 13px; }
+  .sidebar-user .user-role { font-size: 11px; }
+  .sidebar-user .btn-logout { padding: 10px; font-size: 12px; margin-top: 10px; }
+  
+  .main-content { margin-left: 0; }
   
   .menu-toggle {
     display: flex;
     align-items: center;
     justify-content: center;
-  }
-  
-  .topbar {
-    padding: 0 20px;
-  }
-  
-  .topbar-left h2 {
+    width: 40px;
+    height: 40px;
     font-size: 18px;
   }
   
-  .container {
-    padding: 16px;
-  }
+  .topbar { padding: 0 12px; }
+  .topbar-left h2 { font-size: 16px; }
+  .topbar-left p { font-size: 11px; display: none; }
+  
+  .container { padding: 12px; }
   
   .card {
-    padding: 16px;
+    padding: 14px;
+    border-radius: var(--radius);
   }
   
-  .kpi {
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+  .card h3 {
+    font-size: 14px;
+    margin-bottom: 12px;
   }
   
-  .kpi-item {
-    padding: 20px;
-  }
-  
-  .kpi-item .value {
-    font-size: 28px;
-  }
-  
+  /* Overview Card - Compact */
   .overview-card {
-    padding: 20px;
+    padding: 14px;
+    margin-bottom: 12px !important;
   }
+  
+  .overview-card h3 { font-size: 14px; margin-bottom: 4px; }
+  .overview-card > p { font-size: 12px; margin-bottom: 14px; }
   
   .overview-stats {
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
   }
   
   .stat-item {
-    padding: 16px;
+    padding: 10px 8px;
   }
   
   .stat-item .value {
-    font-size: 28px;
+    font-size: 22px;
   }
   
+  .stat-item .label {
+    font-size: 9px;
+    margin-top: 4px;
+  }
+  
+  /* KPI - Compact */
+  .kpi {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  
+  .kpi-item {
+    padding: 12px;
+  }
+  
+  .kpi-item .value { font-size: 22px; }
+  .kpi-item .label { font-size: 11px; margin-top: 6px; }
+  
+  /* Grid */
+  .grid, .grid-2, .grid-3, .grid-4 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  /* Buttons */
   button, .btn {
     width: 100%;
-    padding: 14px;
+    padding: 12px;
+    font-size: 13px;
   }
   
   .btn-sm {
     width: auto;
+    padding: 8px 12px;
+    font-size: 12px;
   }
   
   .toolbar {
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
   }
   
-  /* Fix date picker overflow on mobile */
+  .toolbar button,
+  .toolbar .btn {
+    width: auto;
+    flex: 1;
+    min-width: fit-content;
+  }
+  
+  /* Forms - Compact */
+  .form-group { margin-bottom: 12px; }
+  
+  label {
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  
   input, select, textarea {
     font-size: 16px;
-    padding: 12px;
+    padding: 10px 12px;
     max-width: 100%;
     box-sizing: border-box;
   }
@@ -1160,138 +1215,136 @@ td small {
   input[type="date"],
   input[type="datetime-local"],
   input[type="time"] {
-    min-height: 48px;
+    min-height: 44px;
     -webkit-appearance: none;
     appearance: none;
   }
   
+  textarea { min-height: 70px; }
+  
   .filters {
     grid-template-columns: 1fr;
-    padding: 12px;
-    gap: 12px;
+    padding: 10px;
+    gap: 8px;
+    margin-bottom: 12px;
   }
   
-  .filters .form-group {
-    width: 100%;
-  }
+  .filters .form-group { margin-bottom: 0; }
   
   .row, .row-2, .row-3 {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 10px;
   }
   
-  th, td {
-    padding: 12px;
-    font-size: 13px;
+  /* Tables - Compact */
+  .table-wrap {
+    border-radius: var(--radius-sm);
   }
   
-  .hide-mobile {
-    display: none !important;
+  th {
+    padding: 10px 12px;
+    font-size: 10px;
   }
   
-  .cal-day {
-    min-height: 60px;
-    padding: 8px;
-  }
-  
-  .day-num {
+  td {
+    padding: 10px 12px;
     font-size: 12px;
   }
   
-  .cal-event {
-    font-size: 9px;
-    padding: 2px 4px;
+  td small { font-size: 10px; margin-top: 2px; }
+  
+  .hide-mobile { display: none !important; }
+  
+  /* Badges */
+  .badge {
+    padding: 4px 10px;
+    font-size: 10px;
   }
   
+  /* Alerts */
+  .alert {
+    padding: 10px 12px;
+    font-size: 12px;
+    margin-bottom: 12px;
+  }
+  
+  /* Calendar - Compact */
+  .calendar-header { margin-bottom: 12px; }
+  .calendar-header h3 { font-size: 14px; }
+  .calendar-grid { gap: 4px; }
+  .cal-header { padding: 6px 2px; font-size: 9px; }
+  .cal-day { min-height: 45px; padding: 4px; }
+  .day-num { font-size: 11px; }
+  .cal-event { font-size: 8px; padding: 2px 4px; margin-top: 4px; }
+  
+  /* Profile - Compact */
+  .days-counter {
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  
+  .days-counter b { font-size: 32px; }
+  .days-bar-bg { margin-top: 12px; height: 6px; }
+  
+  .giorni-calc {
+    padding: 10px;
+    margin-bottom: 12px;
+    font-size: 12px;
+  }
+  
+  /* Login */
   .login-card {
-    padding: 24px;
-    margin: 16px;
+    padding: 20px;
+    margin: 12px;
   }
   
-  .login-card h1 {
-    font-size: 24px;
+  .login-card h1 { font-size: 22px; margin-bottom: 4px; }
+  .login-card > p { font-size: 13px; margin-bottom: 20px; }
+  
+  .demo-info {
+    margin-top: 16px;
+    padding: 12px;
   }
   
-  .grid, .grid-2, .grid-3, .grid-4 {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
+  .demo-info strong { font-size: 10px; margin-bottom: 8px; }
+  .demo-info li { padding: 4px 0; font-size: 12px; }
 }
 
-@media (max-width: 480px) {
-  .container {
-    padding: 12px;
-  }
+@media (max-width: 400px) {
+  .container { padding: 10px; }
   
-  .card {
-    padding: 14px;
-  }
+  .card { padding: 12px; }
+  .card h3 { font-size: 13px; margin-bottom: 10px; }
   
-  .kpi {
-    grid-template-columns: 1fr;
-  }
+  .overview-card { padding: 12px; }
+  .overview-stats { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .stat-item { padding: 8px 6px; }
+  .stat-item .value { font-size: 18px; }
+  .stat-item .label { font-size: 8px; }
   
-  .overview-stats {
-    grid-template-columns: 1fr;
-  }
+  .kpi { gap: 6px; }
+  .kpi-item { padding: 10px; }
+  .kpi-item .value { font-size: 18px; }
+  .kpi-item .label { font-size: 10px; }
   
-  .stat-item .value {
-    font-size: 24px;
-  }
+  .topbar { padding: 0 10px; }
+  .topbar-left h2 { font-size: 14px; }
   
-  .days-counter {
-    padding: 20px;
-  }
+  .menu-toggle { width: 36px; height: 36px; font-size: 16px; }
   
-  .days-counter b {
-    font-size: 36px;
-  }
+  input, select, textarea { padding: 10px; font-size: 14px; }
   
-  .calendar-header {
-    flex-direction: column;
-    gap: 12px;
-    text-align: center;
-  }
+  th, td { padding: 8px 6px; font-size: 11px; }
   
-  /* Extra small screen date picker fix */
-  input[type="date"],
-  input[type="datetime-local"],
-  input[type="time"] {
-    font-size: 14px;
-    padding: 10px;
-  }
+  .calendar-header { flex-direction: column; gap: 8px; text-align: center; }
+  .cal-day { min-height: 36px; }
+  .day-num { font-size: 10px; }
+  .cal-event { display: none; }
   
-  .topbar {
-    padding: 0 12px;
-  }
+  .days-counter b { font-size: 28px; }
   
-  .topbar-left h2 {
-    font-size: 16px;
-  }
-  
-  .topbar-left p {
-    font-size: 11px;
-  }
-  
-  .sidebar-header {
-    padding: 20px 16px;
-  }
-  
-  .sidebar-header h1 {
-    font-size: 18px;
-  }
-  
-  th, td {
-    padding: 10px 8px;
-    font-size: 12px;
-  }
-  
-  .table-wrap {
-    margin: 0 -14px;
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
-  }
+  .login-card { padding: 16px; margin: 8px; }
+  .login-card h1 { font-size: 20px; }
 }
 
 /* ============ ANIMATIONS ============ */
