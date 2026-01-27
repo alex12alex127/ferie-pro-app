@@ -57,20 +57,19 @@ function toggleMenu() {
 }
 
 // NAV
-function renderNav(active) {
+function renderNav(active, hasNotifications = false) {
   const nav = $('#main-nav'), user = Auth.getUser();
   if (!nav || !user) return;
   const isM = ['manager', 'admin'].includes(user.role), isA = user.role === 'admin';
   
   const sections = [
     { title: 'Principale', items: [
-      { k: 'dashboard', l: 'Dashboard', h: '/dashboard.html', i: 'home' },
+      { k: 'dashboard', l: 'Dashboard', h: '/dashboard.html', i: 'home', dot: hasNotifications },
       { k: 'request', l: 'Richiedi Ferie', h: '/request.html', i: 'plane' },
       { k: 'calendar', l: 'Calendario', h: '/calendar.html', i: 'calendar' },
     ]},
     { title: 'Operativo', items: [
       { k: 'cantieri', l: 'Cantieri', h: '/cantieri.html', i: 'building', m: true },
-      { k: 'avvisi', l: 'Avvisi', h: '/avvisi.html', i: 'megaphone' },
     ]},
     { title: 'Gestione', items: [
       { k: 'admin', l: 'Admin', h: '/admin.html', i: 'settings', a: true },
@@ -83,7 +82,8 @@ function renderNav(active) {
     if (visibleItems.length) {
       html += `<div class="nav-section"><div class="nav-section-title">${sec.title}</div>`;
       visibleItems.forEach(i => {
-        html += `<a href="${i.h}" class="${i.k === active ? 'active' : ''}" onclick="toggleMenu()">${icon(i.i, 20)}<span>${i.l}</span></a>`;
+        const dot = i.dot ? '<span class="nav-dot"></span>' : '';
+        html += `<a href="${i.h}" class="${i.k === active ? 'active' : ''}" onclick="toggleMenu()">${icon(i.i, 20)}<span>${i.l}</span>${dot}</a>`;
       });
       html += '</div>';
     }
@@ -94,6 +94,14 @@ function renderNav(active) {
   const userName = $('#user-name'), userRole = $('#user-role');
   if (userName) userName.textContent = user.name;
   if (userRole) userRole.textContent = user.role === 'admin' ? 'Amministratore' : user.role === 'manager' ? 'Responsabile' : 'Dipendente';
+}
+
+// Check avvisi count for nav dot
+async function checkAvvisi() {
+  try {
+    const avvisi = await API.get('/api/avvisi') || [];
+    return avvisi.length > 0;
+  } catch { return false; }
 }
 
 // LOGIN
@@ -158,18 +166,86 @@ async function initRequest() {
   load();
 }
 
-// DASHBOARD (unificata con Profilo)
+// DASHBOARD (unificata con Profilo e Avvisi)
 async function initDashboard() {
   if (!Auth.requireAuth()) return;
-  renderNav('dashboard');
   
   const user = Auth.getUser();
   const isM = ['manager', 'admin'].includes(user.role);
+  
+  // Carica avvisi prima per il dot
+  const avvisi = await API.get('/api/avvisi') || [];
+  renderNav('dashboard', avvisi.length > 0);
   
   // Saluto dinamico
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Buongiorno' : hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
   $('#greeting').textContent = `${greeting}, ${user.name.split(' ')[0]}`;
+  
+  // Mostra avvisi se presenti
+  if (avvisi.length > 0) {
+    $('#avvisi-section').classList.remove('hidden');
+    renderAvvisi(avvisi);
+  }
+  
+  // Toggle avvisi
+  let avvisiVisible = true;
+  $('#btn-toggle-avvisi')?.addEventListener('click', () => {
+    avvisiVisible = !avvisiVisible;
+    $('#avvisi-list').style.display = avvisiVisible ? 'block' : 'none';
+    $('#btn-toggle-avvisi').textContent = avvisiVisible ? 'Nascondi' : 'Mostra';
+  });
+  
+  function renderAvvisi(list) {
+    const prioColor = p => p === 'Urgente' ? 'var(--danger)' : p === 'Alta' ? 'var(--warning)' : 'var(--primary)';
+    const prioIcon = p => p === 'Urgente' ? '🔴' : p === 'Alta' ? '🟡' : '🔵';
+    $('#avvisi-list').innerHTML = list.map(a => `
+      <div style="padding:12px;margin-bottom:8px;background:var(--bg-glass);border-radius:var(--radius-xs);border-left:3px solid ${prioColor(a.priorita)}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <span style="font-size:12px">${prioIcon(a.priorita)}</span>
+              <b style="font-size:13px">${esc(a.titolo)}</b>
+            </div>
+            <p style="margin:0;color:var(--text-secondary);font-size:12px;line-height:1.5">${esc(a.messaggio)}</p>
+            <small style="color:var(--text-muted);font-size:11px">${fmtDate(a.created_at)}</small>
+          </div>
+          ${isM ? `<button class="btn-sm btn-ghost" onclick="delAvviso(${a.id})" style="padding:4px 8px;font-size:14px">×</button>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  window.delAvviso = async id => { 
+    if (confirm('Eliminare avviso?')) { 
+      await API.delete(`/api/avvisi/${id}`); 
+      const newAvvisi = await API.get('/api/avvisi') || [];
+      if (newAvvisi.length > 0) {
+        renderAvvisi(newAvvisi);
+      } else {
+        $('#avvisi-section').classList.add('hidden');
+      }
+      renderNav('dashboard', newAvvisi.length > 0);
+    } 
+  };
+  
+  // Form pubblica avviso (solo manager/admin)
+  if (isM) {
+    $('#avviso-form-section').classList.remove('hidden');
+    const af = $('#avviso-form'), aalert = $('#avviso-alert');
+    af.addEventListener('submit', async e => {
+      e.preventDefault(); aalert.classList.add('hidden');
+      try { 
+        await API.post('/api/avvisi', { titolo: af.titolo.value, messaggio: af.messaggio.value, priorita: af.priorita.value }); 
+        aalert.textContent = 'Pubblicato!'; aalert.className = 'alert alert-success'; aalert.classList.remove('hidden'); 
+        af.reset();
+        const newAvvisi = await API.get('/api/avvisi') || [];
+        $('#avvisi-section').classList.remove('hidden');
+        renderAvvisi(newAvvisi);
+        renderNav('dashboard', true);
+      } catch { aalert.textContent = 'Errore'; aalert.className = 'alert alert-error'; aalert.classList.remove('hidden'); }
+    });
+  }
   
   // Carica profilo e giorni ferie
   const profile = await API.get('/api/profile');
@@ -334,38 +410,3 @@ async function initCantieri() {
   load();
 }
 
-// AVVISI
-async function initAvvisi() {
-  if (!Auth.requireAuth()) return;
-  renderNav('avvisi');
-  const avvisiList = $('#avvisi-list'), form = $('#form'), alert = $('#alert'), formCard = $('#form-card');
-  const isM = ['manager', 'admin'].includes(Auth.getUser().role);
-  if (!isM) formCard.style.display = 'none';
-  async function load() {
-    const avvisi = await API.get('/api/avvisi') || [];
-    const prioColor = p => p === 'Urgente' ? 'var(--danger)' : p === 'Alta' ? 'var(--warning)' : 'var(--primary)';
-    const prioIcon = p => p === 'Urgente' ? '🔴' : p === 'Alta' ? '🟡' : '🔵';
-    avvisiList.innerHTML = avvisi.length ? avvisi.map(a => `
-      <div class="card" style="margin-bottom:16px;border-left:3px solid ${prioColor(a.priorita)};padding:20px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
-          <div style="flex:1">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-              <span>${prioIcon(a.priorita)}</span>
-              <b style="font-size:15px">${esc(a.titolo)}</b>
-            </div>
-            <p style="margin:0 0 12px;color:var(--text-secondary);line-height:1.6">${esc(a.messaggio)}</p>
-            <small style="color:var(--text-muted)">${fmtDate(a.created_at)}</small>
-          </div>
-          ${isM ? `<button class="btn-sm btn-ghost" onclick="delAvviso(${a.id})" style="flex-shrink:0">×</button>` : ''}
-        </div>
-      </div>
-    `).join('') : '<div style="text-align:center;padding:40px;color:var(--text-muted)"><p>Nessun avviso pubblicato</p></div>';
-  }
-  window.delAvviso = async id => { if (confirm('Eliminare avviso?')) { await API.delete(`/api/avvisi/${id}`); load(); } };
-  form?.addEventListener('submit', async e => {
-    e.preventDefault(); alert.classList.add('hidden');
-    try { await API.post('/api/avvisi', { titolo: form.titolo.value, messaggio: form.messaggio.value, priorita: form.priorita.value }); alert.textContent = 'Pubblicato!'; alert.className = 'alert alert-success'; alert.classList.remove('hidden'); form.reset(); load(); }
-    catch { alert.textContent = 'Errore'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
-  });
-  load();
-}

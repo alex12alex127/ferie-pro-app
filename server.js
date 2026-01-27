@@ -491,7 +491,7 @@ app.get('/api/export', auth, isManager, (req, res) => {
 });
 
 // HTML Routes
-const pages = ['/', '/index.html', '/register.html', '/request.html', '/dashboard.html', '/admin.html', '/calendar.html', '/cantieri.html', '/avvisi.html'];
+const pages = ['/', '/index.html', '/register.html', '/request.html', '/dashboard.html', '/admin.html', '/calendar.html', '/cantieri.html'];
 pages.forEach(p => app.get(p, (req, res) => res.sendFile(path.join(__dirname, 'public', p === '/' ? 'index.html' : p))));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 

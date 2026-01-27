@@ -33,6 +33,17 @@
       </header>
       
       <div class="container">
+        <!-- Avvisi Section -->
+        <div id="avvisi-section" class="hidden" style="margin-bottom:16px">
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <h3 style="margin:0">Avvisi Recenti</h3>
+              <button class="btn-ghost btn-sm" id="btn-toggle-avvisi">Nascondi</button>
+            </div>
+            <div id="avvisi-list"></div>
+          </div>
+        </div>
+        
         <!-- Ferie Counter (visibile a tutti) -->
         <div class="days-counter" style="margin-bottom:16px">
           <div id="days-info"></div>
@@ -115,6 +126,35 @@
                 <tbody id="requests-list"></tbody>
               </table>
             </div>
+          </div>
+        </div>
+        
+        <!-- Pubblica Avviso (solo manager/admin) -->
+        <div id="avviso-form-section" class="hidden" style="margin-bottom:16px">
+          <div class="card">
+            <h3>Pubblica Avviso</h3>
+            <div id="avviso-alert" class="alert hidden"></div>
+            <form id="avviso-form">
+              <div class="row row-2">
+                <div class="form-group">
+                  <label>Titolo</label>
+                  <input type="text" name="titolo" required placeholder="Titolo avviso">
+                </div>
+                <div class="form-group">
+                  <label>Priorità</label>
+                  <select name="priorita">
+                    <option value="Normale">Normale</option>
+                    <option value="Alta">Alta</option>
+                    <option value="Urgente">Urgente</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Messaggio</label>
+                <textarea name="messaggio" required placeholder="Contenuto dell'avviso..." style="min-height:60px"></textarea>
+              </div>
+              <button type="submit" class="btn-sm">Pubblica</button>
+            </form>
           </div>
         </div>
         
