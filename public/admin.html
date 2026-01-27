@@ -10,8 +10,13 @@
   <div class="app-layout">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <h1>Portal Manager</h1>
-        <small>Gestione Aziendale</small>
+        <div class="logo-container">
+          <img src="/logo.png" alt="Logo" class="company-logo" id="company-logo" onerror="this.style.display='none'">
+          <div class="logo-text">
+            <h1>Portal Manager</h1>
+            <small>Gestione Aziendale</small>
+          </div>
+        </div>
       </div>
       <nav class="sidebar-nav" id="main-nav"></nav>
       <div class="sidebar-user">
@@ -33,6 +38,24 @@
       </header>
       
       <div class="container">
+        <!-- Logo Aziendale -->
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">
+            <div style="display:flex;align-items:center;gap:12px">
+              <img src="/logo.png" alt="Logo" id="preview-logo" style="width:50px;height:50px;object-fit:contain;border-radius:8px;background:var(--bg-glass);padding:4px" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%236366f1%22 width=%22100%22 height=%22100%22 rx=%2215%22/><text x=%2250%22 y=%2265%22 font-size=%2240%22 fill=%22white%22 text-anchor=%22middle%22 font-family=%22Arial%22>PM</text></svg>'">
+              <div>
+                <h3 style="margin:0">Logo Aziendale</h3>
+                <p style="margin:4px 0 0;color:var(--text-muted);font-size:13px">Personalizza il logo della webapp</p>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <input type="url" id="logo-url" placeholder="URL del logo..." style="padding:8px 12px;font-size:13px;width:250px">
+              <button class="btn-sm" onclick="saveLogo()">Salva</button>
+            </div>
+          </div>
+          <div id="logo-alert" class="alert hidden" style="margin-top:12px"></div>
+        </div>
+        
         <!-- Backup & Restore -->
         <div class="card" style="margin-bottom:16px;background:linear-gradient(135deg, var(--bg-card), rgba(99, 102, 241, 0.1));border:1px solid var(--primary-glow)">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">

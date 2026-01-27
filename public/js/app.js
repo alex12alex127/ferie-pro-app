@@ -56,6 +56,23 @@ function toggleMenu() {
   $('#overlay')?.classList.toggle('open');
 }
 
+// Load company logo
+async function loadCompanyLogo() {
+  try {
+    const res = await fetch('/api/settings/logo');
+    const data = await res.json();
+    if (data?.logoUrl) {
+      const logo = $('#company-logo');
+      if (logo) {
+        logo.src = data.logoUrl;
+        logo.style.display = 'block';
+      }
+    }
+  } catch {}
+}
+// Auto-load logo on page load
+document.addEventListener('DOMContentLoaded', loadCompanyLogo);
+
 // NAV
 function renderNav(active, hasNotifications = false) {
   const nav = $('#main-nav'), user = Auth.getUser();
@@ -458,6 +475,30 @@ async function initAdmin() {
   [ft, fs].forEach(el => el.addEventListener('input', renderReq));
   $('#btn-refresh').addEventListener('click', loadReq);
   loadReq(); loadUsers();
+  
+  // Logo functions
+  const logoSettings = await API.get('/api/settings/logo');
+  if (logoSettings?.logoUrl) {
+    $('#logo-url').value = logoSettings.logoUrl;
+    $('#preview-logo').src = logoSettings.logoUrl;
+  }
+  
+  window.saveLogo = async () => {
+    const url = $('#logo-url').value.trim();
+    const alert = $('#logo-alert');
+    alert.classList.add('hidden');
+    try {
+      await API.post('/api/settings/logo', { logoUrl: url });
+      alert.textContent = 'Logo salvato! Ricarica la pagina per vedere le modifiche.';
+      alert.className = 'alert alert-success';
+      alert.classList.remove('hidden');
+      if (url) $('#preview-logo').src = url;
+    } catch {
+      alert.textContent = 'Errore nel salvataggio';
+      alert.className = 'alert alert-error';
+      alert.classList.remove('hidden');
+    }
+  };
   
   // Backup functions
   const lastBackup = localStorage.getItem('lastBackup');

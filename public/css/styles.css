@@ -150,6 +150,25 @@ body::before {
   border-bottom: 1px solid var(--border);
 }
 
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.company-logo {
+  width: 45px;
+  height: 45px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.logo-text {
+  flex: 1;
+  min-width: 0;
+}
+
 .sidebar-header h1 {
   font-size: 22px;
   font-weight: 700;

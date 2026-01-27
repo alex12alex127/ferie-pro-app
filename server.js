@@ -545,6 +545,23 @@ app.get('/api/export', auth, isManager, (req, res) => {
   } else res.json(data);
 });
 
+// LOGO / SETTINGS
+const settingsFile = path.join(dataDir, 'settings.json');
+const getSettings = () => {
+  try { return JSON.parse(fs.readFileSync(settingsFile, 'utf8')); } 
+  catch { return { logoUrl: '' }; }
+};
+const saveSettings = (settings) => fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2));
+
+app.get('/api/settings/logo', (req, res) => res.json({ logoUrl: getSettings().logoUrl || '' }));
+app.post('/api/settings/logo', auth, isAdmin, (req, res) => {
+  const { logoUrl } = req.body;
+  const settings = getSettings();
+  settings.logoUrl = logoUrl || '';
+  saveSettings(settings);
+  res.json({ message: 'OK' });
+});
+
 // BACKUP & RESTORE
 app.get('/api/backup', auth, isAdmin, (req, res) => {
   try {
