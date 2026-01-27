@@ -48,7 +48,10 @@ const icons = {
   lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
   save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>',
   hardhat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2z"/><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M4 15v-3a6 6 0 0 1 6-6"/><path d="M14 6a6 6 0 0 1 6 6v3"/></svg>',
-  shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>'
+  shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>',
+  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+  download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>',
+  upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>'
 };
 const icon = (name, size = 18) => `<span class="icon" style="width:${size}px;height:${size}px">${icons[name] || ''}</span>`;
 
@@ -849,6 +852,7 @@ async function initDPI() {
   if (!isManager) {
     $('#form-card')?.remove();
     $('#tab-catalogo')?.remove();
+    $('#tab-gestione')?.remove();
   }
   
   let catalogo = [];
@@ -988,9 +992,15 @@ async function initDPI() {
           <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg-glass);border:1px solid var(--border);border-radius:8px;margin-bottom:8px">
             <div>
               <div style="font-weight:500">${d.nome}</div>
-              <div style="font-size:11px;color:var(--text-muted)">${d.descrizione || ''} • Taglie: ${d.taglia_disponibili}</div>
+              <div style="font-size:11px;color:var(--text-muted)">
+                ${d.descrizione || ''} • Taglie: ${d.taglia_disponibili}
+                ${d.codice_barre ? ` • Codice: ${d.codice_barre}` : ''}
+              </div>
             </div>
-            <button onclick="delDpi(${d.id})" class="btn-ghost btn-sm" style="color:var(--danger)">${icon('trash', 14)}</button>
+            <div style="display:flex;gap:8px">
+              <button onclick="editDpi(${d.id})" class="btn-ghost btn-sm" style="color:var(--primary)" title="Modifica">${icon('edit', 14)}</button>
+              <button onclick="delDpi(${d.id})" class="btn-ghost btn-sm" style="color:var(--danger)" title="Elimina">${icon('trash', 14)}</button>
+            </div>
           </div>
         `).join('')}
       </div>
@@ -1004,6 +1014,7 @@ async function initDPI() {
     document.querySelector(`.tab[onclick="showTab('${tab}')"]`)?.classList.add('active');
     $('#panel-assegnazioni').classList.toggle('hidden', tab !== 'assegnazioni');
     $('#panel-catalogo')?.classList.toggle('hidden', tab !== 'catalogo');
+    $('#panel-gestione')?.classList.toggle('hidden', tab !== 'gestione');
   };
   
   // Form submit - new assignment
@@ -1065,13 +1076,15 @@ async function initDPI() {
           nome: catForm.nome.value,
           categoria: catForm.categoria.value,
           descrizione: catForm.descrizione.value,
-          taglia_disponibili: catForm.taglia_disponibili.value || 'Unica'
+          taglia_disponibili: catForm.taglia_disponibili.value || 'Unica',
+          codice_barre: catForm.codice_barre.value || null
         });
         alertCat.textContent = 'DPI aggiunto al catalogo!';
         alertCat.className = 'alert alert-success';
         alertCat.classList.remove('hidden');
         catForm.reset();
         catForm.taglia_disponibili.value = 'Unica';
+        catForm.codice_barre.value = '';
         await loadData();
         renderCatalogo();
         // Update select
@@ -1113,6 +1126,188 @@ async function initDPI() {
       renderCatalogo();
     } catch (err) {
       alert(err.message || 'Impossibile eliminare: DPI assegnato a dipendenti');
+    }
+  };
+  
+  // Edit DPI
+  window.editDpi = (id) => {
+    const dpi = catalogo.find(d => d.id === id);
+    if (!dpi) return;
+    
+    const form = $('#edit-form');
+    const instructions = $('#edit-instructions');
+    
+    form.edit_id.value = dpi.id;
+    form.edit_nome.value = dpi.nome;
+    form.edit_categoria.value = dpi.categoria;
+    form.edit_descrizione.value = dpi.descrizione || '';
+    form.edit_taglia_disponibili.value = dpi.taglia_disponibili || 'Unica';
+    form.edit_codice_barre.value = dpi.codice_barre || '';
+    
+    form.style.display = 'block';
+    instructions.style.display = 'none';
+    
+    // Switch to gestione tab
+    showTab('gestione');
+  };
+  
+  window.cancelEdit = () => {
+    const form = $('#edit-form');
+    const instructions = $('#edit-instructions');
+    const alert = $('#alert-edit');
+    
+    form.style.display = 'none';
+    instructions.style.display = 'block';
+    alert.classList.add('hidden');
+    form.reset();
+  };
+  
+  // Edit form submit
+  const editForm = $('#edit-form');
+  const alertEdit = $('#alert-edit');
+  if (editForm) {
+    editForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      alertEdit.classList.add('hidden');
+      
+      try {
+        await API.patch('/api/dpi/catalogo/' + editForm.edit_id.value, {
+          nome: editForm.edit_nome.value,
+          categoria: editForm.edit_categoria.value,
+          descrizione: editForm.edit_descrizione.value,
+          taglia_disponibili: editForm.edit_taglia_disponibili.value || 'Unica',
+          codice_barre: editForm.edit_codice_barre.value || null
+        });
+        
+        alertEdit.textContent = 'DPI aggiornato con successo!';
+        alertEdit.className = 'alert alert-success';
+        alertEdit.classList.remove('hidden');
+        
+        await loadData();
+        renderCatalogo();
+        cancelEdit();
+        
+        // Update select dropdown
+        const selectDpi = $('#select-dpi');
+        if (selectDpi) {
+          selectDpi.innerHTML = '<option value="">Seleziona DPI...</option>';
+          const byCategoria = {};
+          catalogo.forEach(d => {
+            if (!byCategoria[d.categoria]) byCategoria[d.categoria] = [];
+            byCategoria[d.categoria].push(d);
+          });
+          Object.entries(byCategoria).forEach(([cat, items]) => {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = cat;
+            items.forEach(d => {
+              const opt = document.createElement('option');
+              opt.value = d.id;
+              opt.textContent = d.nome;
+              opt.dataset.taglie = d.taglia_disponibili || 'Unica';
+              optgroup.appendChild(opt);
+            });
+            selectDpi.appendChild(optgroup);
+          });
+        }
+      } catch (err) {
+        alertEdit.textContent = err.message || 'Errore aggiornamento';
+        alertEdit.className = 'alert alert-error';
+        alertEdit.classList.remove('hidden');
+      }
+    });
+  }
+  
+  // Export DPI
+  window.exportDPI = async () => {
+    try {
+      const response = await fetch('/api/dpi/export', {
+        headers: { 'Authorization': 'Bearer ' + Auth.getToken() }
+      });
+      
+      if (!response.ok) throw new Error('Errore export');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dpi-export-${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      const alertImport = $('#alert-import');
+      alertImport.textContent = 'Export completato con successo!';
+      alertImport.className = 'alert alert-success';
+      alertImport.classList.remove('hidden');
+      setTimeout(() => alertImport.classList.add('hidden'), 3000);
+    } catch (err) {
+      const alertImport = $('#alert-import');
+      alertImport.textContent = 'Errore durante l\'export: ' + err.message;
+      alertImport.className = 'alert alert-error';
+      alertImport.classList.remove('hidden');
+    }
+  };
+  
+  // Import DPI
+  window.importDPI = async () => {
+    const fileInput = $('#import-file');
+    const file = fileInput.files[0];
+    const alertImport = $('#alert-import');
+    
+    if (!file) {
+      alertImport.textContent = 'Seleziona un file JSON da importare';
+      alertImport.className = 'alert alert-error';
+      alertImport.classList.remove('hidden');
+      return;
+    }
+    
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      
+      if (!data.catalogo) {
+        throw new Error('File non valido: manca il catalogo DPI');
+      }
+      
+      const response = await API.post('/api/dpi/import', data);
+      
+      alertImport.textContent = response.message;
+      alertImport.className = 'alert alert-success';
+      alertImport.classList.remove('hidden');
+      
+      fileInput.value = '';
+      await loadData();
+      renderCatalogo();
+      
+      // Update select dropdown
+      const selectDpi = $('#select-dpi');
+      if (selectDpi) {
+        selectDpi.innerHTML = '<option value="">Seleziona DPI...</option>';
+        const byCategoria = {};
+        catalogo.forEach(d => {
+          if (!byCategoria[d.categoria]) byCategoria[d.categoria] = [];
+          byCategoria[d.categoria].push(d);
+        });
+        Object.entries(byCategoria).forEach(([cat, items]) => {
+          const optgroup = document.createElement('optgroup');
+          optgroup.label = cat;
+          items.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d.id;
+            opt.textContent = d.nome;
+            opt.dataset.taglie = d.taglia_disponibili || 'Unica';
+            optgroup.appendChild(opt);
+          });
+          selectDpi.appendChild(optgroup);
+        });
+      }
+      
+      setTimeout(() => alertImport.classList.add('hidden'), 5000);
+    } catch (err) {
+      alertImport.textContent = 'Errore import: ' + err.message;
+      alertImport.className = 'alert alert-error';
+      alertImport.classList.remove('hidden');
     }
   };
 }

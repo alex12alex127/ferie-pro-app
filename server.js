@@ -222,6 +222,23 @@ if (dpiCount.c === 0) {
   defaultDpi.forEach(d => insertDpi.run(...d));
 }
 
+// Add codice_barre column to dpi_catalogo if not exists
+try { db.exec('ALTER TABLE dpi_catalogo ADD COLUMN codice_barre TEXT DEFAULT NULL'); } catch {}
+
+// Add storico_modifiche table for DPI changes
+db.exec(`
+  CREATE TABLE IF NOT EXISTS dpi_storico (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dpi_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    azione TEXT NOT NULL,
+    dettagli TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (dpi_id) REFERENCES dpi_catalogo(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+`);
+
 // Add sede_id column to users if not exists
 try { db.exec('ALTER TABLE users ADD COLUMN sede_id INTEGER DEFAULT NULL'); } catch {}
 
@@ -593,12 +610,73 @@ app.get('/api/dpi/catalogo', auth, (req, res) => {
 });
 
 app.post('/api/dpi/catalogo', auth, isManager, (req, res) => {
-  const { nome, categoria, descrizione, taglia_disponibili } = req.body;
+  const { nome, categoria, descrizione, taglia_disponibili, codice_barre } = req.body;
   if (!nome || !categoria) return res.status(400).json({ error: 'Nome e categoria obbligatori' });
   try {
-    const result = db.prepare('INSERT INTO dpi_catalogo (nome, categoria, descrizione, taglia_disponibili) VALUES (?, ?, ?, ?)').run(nome, categoria, descrizione || '', taglia_disponibili || 'Unica');
+    const result = db.prepare('INSERT INTO dpi_catalogo (nome, categoria, descrizione, taglia_disponibili, codice_barre) VALUES (?, ?, ?, ?, ?)').run(nome, categoria, descrizione || '', taglia_disponibili || 'Unica', codice_barre || null);
     res.json({ id: result.lastInsertRowid, message: 'DPI aggiunto' });
   } catch { res.status(500).json({ error: 'Errore creazione DPI' }); }
+});
+
+app.patch('/api/dpi/catalogo/:id', auth, isManager, (req, res) => {
+  const { nome, categoria, descrizione, taglia_disponibili, codice_barre } = req.body;
+  if (!nome || !categoria) return res.status(400).json({ error: 'Nome e categoria obbligatori' });
+  try {
+    db.prepare('UPDATE dpi_catalogo SET nome=?, categoria=?, descrizione=?, taglia_disponibili=?, codice_barre=? WHERE id=?')
+      .run(nome, categoria, descrizione || '', taglia_disponibili || 'Unica', codice_barre || null, req.params.id);
+    res.json({ message: 'DPI aggiornato' });
+  } catch { res.status(500).json({ error: 'Errore aggiornamento DPI' }); }
+});
+
+// DPI Import/Export
+app.get('/api/dpi/export', auth, isManager, (req, res) => {
+  try {
+    const catalogo = db.prepare('SELECT * FROM dpi_catalogo ORDER BY categoria, nome').all();
+    const assegnazioni = db.prepare(`
+      SELECT a.*, d.nome as dpi_nome, d.categoria, u.name as dipendente_nome
+      FROM dpi_assegnazioni a
+      JOIN dpi_catalogo d ON a.dpi_id = d.id
+      JOIN users u ON a.user_id = u.id
+      ORDER BY a.data_consegna DESC
+    `).all();
+    
+    const exportData = {
+      version: '1.0',
+      exported_at: new Date().toISOString(),
+      catalogo,
+      assegnazioni
+    };
+    
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename=dpi-export-${new Date().toISOString().slice(0,10)}.json`);
+    res.json(exportData);
+  } catch (err) {
+    res.status(500).json({ error: 'Errore export: ' + err.message });
+  }
+});
+
+app.post('/api/dpi/import', auth, isAdmin, (req, res) => {
+  const { catalogo, assegnazioni } = req.body;
+  if (!catalogo) return res.status(400).json({ error: 'Dati catalogo mancanti' });
+  
+  try {
+    const transaction = db.transaction(() => {
+      // Import catalogo (solo nuovi elementi)
+      const insertDpi = db.prepare('INSERT OR IGNORE INTO dpi_catalogo (nome, categoria, descrizione, taglia_disponibili, codice_barre) VALUES (?, ?, ?, ?, ?)');
+      let imported = 0;
+      catalogo.forEach(d => {
+        const result = insertDpi.run(d.nome, d.categoria, d.descrizione, d.taglia_disponibili, d.codice_barre);
+        if (result.changes > 0) imported++;
+      });
+      
+      return imported;
+    });
+    
+    const imported = transaction();
+    res.json({ message: `Import completato: ${imported} DPI aggiunti al catalogo` });
+  } catch (err) {
+    res.status(500).json({ error: 'Errore import: ' + err.message });
+  }
 });
 
 app.delete('/api/dpi/catalogo/:id', auth, isManager, (req, res) => {

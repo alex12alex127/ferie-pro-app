@@ -44,6 +44,7 @@
         <div class="tabs" style="margin-bottom:20px">
           <button class="tab active" onclick="showTab('assegnazioni')">Assegnazioni</button>
           <button class="tab" onclick="showTab('catalogo')" id="tab-catalogo">Catalogo DPI</button>
+          <button class="tab" onclick="showTab('gestione')" id="tab-gestione">Gestione Avanzata</button>
         </div>
         
         <!-- Tab Assegnazioni -->
@@ -164,8 +165,105 @@
                   <small style="color:var(--text-muted)">Separa le taglie con virgola</small>
                 </div>
                 
+                <div class="form-group">
+                  <label>Codice a Barre (opzionale)</label>
+                  <input type="text" name="codice_barre" placeholder="es. 1234567890123">
+                  <small style="color:var(--text-muted)">Codice identificativo univoco</small>
+                </div>
+                
                 <button type="submit">Aggiungi al Catalogo</button>
               </form>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Tab Gestione Avanzata (solo admin/manager) -->
+        <div id="panel-gestione" class="hidden">
+          <div class="grid grid-2">
+            <!-- Import/Export -->
+            <div class="card">
+              <h3>Import/Export Catalogo</h3>
+              <div id="alert-import" class="alert hidden"></div>
+              
+              <div style="margin-bottom:20px">
+                <h4 style="margin-bottom:10px">Export Catalogo DPI</h4>
+                <p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">
+                  Scarica il catalogo DPI completo con tutte le assegnazioni
+                </p>
+                <button onclick="exportDPI()" class="btn-secondary">
+                  <span class="icon">📥</span>
+                  Esporta Catalogo
+                </button>
+              </div>
+              
+              <div>
+                <h4 style="margin-bottom:10px">Import Catalogo DPI</h4>
+                <p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">
+                  Importa DPI da file JSON (solo nuovi elementi)
+                </p>
+                <input type="file" id="import-file" accept=".json" style="margin-bottom:10px">
+                <button onclick="importDPI()" class="btn-primary">
+                  <span class="icon">📤</span>
+                  Importa Catalogo
+                </button>
+              </div>
+            </div>
+            
+            <!-- Modifica DPI -->
+            <div class="card">
+              <h3>Modifica DPI Esistente</h3>
+              <div id="alert-edit" class="alert hidden"></div>
+              
+              <form id="edit-form" style="display:none">
+                <input type="hidden" name="edit_id">
+                
+                <div class="form-group">
+                  <label>Nome DPI</label>
+                  <input type="text" name="edit_nome" required>
+                </div>
+                
+                <div class="form-group">
+                  <label>Categoria</label>
+                  <select name="edit_categoria" required>
+                    <option value="Protezione testa">Protezione testa</option>
+                    <option value="Protezione occhi">Protezione occhi</option>
+                    <option value="Protezione udito">Protezione udito</option>
+                    <option value="Protezione vie respiratorie">Protezione vie respiratorie</option>
+                    <option value="Protezione mani">Protezione mani</option>
+                    <option value="Protezione piedi">Protezione piedi</option>
+                    <option value="Protezione anticaduta">Protezione anticaduta</option>
+                    <option value="Visibilità">Visibilità</option>
+                    <option value="Protezione corpo">Protezione corpo</option>
+                    <option value="Altro">Altro</option>
+                  </select>
+                </div>
+                
+                <div class="form-group">
+                  <label>Descrizione</label>
+                  <textarea name="edit_descrizione"></textarea>
+                </div>
+                
+                <div class="form-group">
+                  <label>Taglie Disponibili</label>
+                  <input type="text" name="edit_taglia_disponibili">
+                </div>
+                
+                <div class="form-group">
+                  <label>Codice a Barre</label>
+                  <input type="text" name="edit_codice_barre">
+                </div>
+                
+                <div style="display:flex;gap:10px">
+                  <button type="submit">Salva Modifiche</button>
+                  <button type="button" onclick="cancelEdit()" class="btn-secondary">Annulla</button>
+                </div>
+              </form>
+              
+              <div id="edit-instructions">
+                <p style="color:var(--text-muted);text-align:center;padding:40px 20px">
+                  Clicca su "Modifica" accanto a un DPI nel catalogo per modificarlo
+                </p>
+              </div>
             </div>
           </div>
         </div>
