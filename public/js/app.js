@@ -179,7 +179,7 @@ async function initRequest() {
     const payload = { nome: form.nome.value, email: form.email.value, inizio: form.inizio.value, fine: form.fine.value, tipo: form.tipo.value, urgenza: form.urgenza.value, motivo: form.motivo?.value };
     // Aggiungi codice malattia se presente
     if (form.tipo.value === 'Malattia') {
-      if (!codiceMalattia.value.trim()) { alert.textContent = 'Inserisci il codice malattia'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); return; }
+      if (!codiceMalattia.value.trim()) { alert.textContent = 'Inserisci il numero di protocollo'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); return; }
       payload.codice_malattia = codiceMalattia.value.trim();
     }
     if (!payload.inizio || !payload.fine || payload.fine < payload.inizio) { alert.textContent = 'Date non valide'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); return; }
