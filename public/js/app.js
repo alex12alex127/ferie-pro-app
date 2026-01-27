@@ -352,7 +352,14 @@ async function initDashboard() {
     function render() {
       const q = (ft.value || '').toLowerCase(), st = fs.value, from = ff.value, to = fto.value;
       const f = all.filter(r => (!q || [r.nome, r.email, r.reparto].join(' ').toLowerCase().includes(q)) && (!st || r.stato === st) && (!from || r.inizio >= from) && (!to || r.fine <= to));
-      list.innerHTML = f.length ? f.map(r => `<tr><td><b>${esc(r.nome)}</b><br><small>${esc(r.email)}</small></td><td class="hide-mobile">${esc(r.reparto || '-')}</td><td>${esc(r.inizio)} → ${esc(r.fine)}</td><td>${r.giorni}g</td><td><span class="badge ${badge(r.stato)}">${esc(r.stato)}</span></td><td><button class="btn-sm btn-secondary" onclick="action(${r.id},'Approvata')">✓</button> <button class="btn-sm btn-ghost" onclick="action(${r.id},'Rifiutata')">✗</button></td></tr>`).join('') : '<tr><td colspan="6">Nessuna.</td></tr>';
+      list.innerHTML = f.length ? f.map(r => `<tr>
+        <td><b>${esc(r.nome)}</b><br><small>${esc(r.tipo || 'Ferie')}</small></td>
+        <td class="hide-mobile">${r.codice_malattia ? `<span class="badge badge-info" style="font-size:10px">Prot: ${esc(r.codice_malattia)}</span>` : '-'}</td>
+        <td>${esc(r.inizio)} → ${esc(r.fine)}</td>
+        <td>${r.giorni}g</td>
+        <td><span class="badge ${badge(r.stato)}">${esc(r.stato)}</span></td>
+        <td><button class="btn-sm btn-secondary" onclick="action(${r.id},'Approvata')">✓</button> <button class="btn-sm btn-ghost" onclick="action(${r.id},'Rifiutata')">✗</button></td>
+      </tr>`).join('') : '<tr><td colspan="6">Nessuna.</td></tr>';
     }
     window.action = async (id, stato) => { await API.patch(`/api/requests/${id}/status`, { stato }); load(); };
     window.exportData = f => window.open(`/api/export?format=${f}&from=${ff.value}&to=${fto.value}&stato=${fs.value}`);
@@ -410,7 +417,12 @@ async function initAdmin() {
   function renderReq() {
     const q = (ft.value || '').toLowerCase(), st = fs.value;
     const f = all.filter(r => (!q || r.nome.toLowerCase().includes(q)) && (!st || r.stato === st));
-    list.innerHTML = f.length ? f.map(r => `<tr><td><b>${esc(r.nome)}</b></td><td>${esc(r.inizio)} → ${esc(r.fine)}</td><td><span class="badge ${badge(r.stato)}">${esc(r.stato)}</span></td><td><button class="btn-sm btn-secondary" onclick="action(${r.id},'Approvata')">✓</button> <button class="btn-sm btn-ghost" onclick="action(${r.id},'Rifiutata')">✗</button> <button class="btn-sm btn-danger" onclick="delReq(${r.id})">🗑</button></td></tr>`).join('') : '<tr><td colspan="4">Nessuna.</td></tr>';
+    list.innerHTML = f.length ? f.map(r => `<tr>
+      <td><b>${esc(r.nome)}</b><br><small style="color:var(--text-muted)">${esc(r.tipo || 'Ferie')}</small></td>
+      <td>${esc(r.inizio)} → ${esc(r.fine)}<br><small>${r.giorni} giorn${r.giorni === 1 ? 'o' : 'i'}</small></td>
+      <td>${r.codice_malattia ? `<span class="badge badge-info" style="font-size:10px">Prot: ${esc(r.codice_malattia)}</span><br>` : ''}<span class="badge ${badge(r.stato)}">${esc(r.stato)}</span></td>
+      <td><button class="btn-sm btn-secondary" onclick="action(${r.id},'Approvata')">✓</button> <button class="btn-sm btn-ghost" onclick="action(${r.id},'Rifiutata')">✗</button> <button class="btn-sm btn-danger" onclick="delReq(${r.id})">🗑</button></td>
+    </tr>`).join('') : '<tr><td colspan="4">Nessuna.</td></tr>';
   }
   async function loadUsers() {
     allUsers = await API.get('/api/users') || [];

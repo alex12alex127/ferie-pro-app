@@ -7,12 +7,12 @@
 
 /* ============ CSS VARIABLES ============ */
 :root {
-  /* Light Premium Palette */
-  --bg-dark: #f8fafc;
-  --bg-surface: #ffffff;
-  --bg-card: #ffffff;
-  --bg-glass: rgba(255, 255, 255, 0.8);
-  --bg-hover: #f1f5f9;
+  /* Light-Medium Premium Palette */
+  --bg-dark: #e2e8f0;
+  --bg-surface: #f1f5f9;
+  --bg-card: #f8fafc;
+  --bg-glass: rgba(255, 255, 255, 0.6);
+  --bg-hover: #e2e8f0;
   
   /* Primary Colors - Blue */
   --primary: #3b82f6;
@@ -41,9 +41,9 @@
   --text-muted: #94a3b8;
   
   /* Borders */
-  --border: rgba(0, 0, 0, 0.08);
-  --border-light: rgba(0, 0, 0, 0.04);
-  --border-glow: rgba(59, 130, 246, 0.3);
+  --border: rgba(0, 0, 0, 0.12);
+  --border-light: rgba(0, 0, 0, 0.06);
+  --border-glow: rgba(59, 130, 246, 0.35);
   
   /* Status */
   --success: #10b981;
@@ -55,9 +55,9 @@
   
   /* Effects */
   --glass-blur: blur(10px);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.12);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.14);
+  --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.16);
   --shadow-glow: 0 0 20px var(--primary-glow);
   
   /* Layout */
@@ -121,9 +121,9 @@ body::before {
   right: 0;
   bottom: 0;
   background: 
-    linear-gradient(135deg, #f0f9ff 0%, #ffffff 50%, #f8fafc 100%),
-    radial-gradient(ellipse 60% 40% at 100% 20%, rgba(59, 130, 246, 0.06), transparent),
-    radial-gradient(ellipse 50% 35% at 0% 80%, rgba(56, 189, 248, 0.05), transparent);
+    linear-gradient(135deg, #e0e7ef 0%, #e8eef5 50%, #dfe6ee 100%),
+    radial-gradient(ellipse 60% 40% at 100% 20%, rgba(59, 130, 246, 0.08), transparent),
+    radial-gradient(ellipse 50% 35% at 0% 80%, rgba(56, 189, 248, 0.06), transparent);
   pointer-events: none;
   z-index: 0;
 }
@@ -145,9 +145,9 @@ body::before {
   position: fixed;
   top: 0;
   left: 0;
-  background: var(--bg-surface);
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
   border-right: 1px solid var(--border);
-  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.04);
+  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
   z-index: 1000;
@@ -169,13 +169,13 @@ body::before {
   width: 52px;
   height: 52px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  border: 2px solid rgba(59, 130, 246, 0.2);
+  background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
+  border: 2px solid rgba(59, 130, 246, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
   transition: all 0.3s ease;
 }
 
@@ -335,7 +335,7 @@ body::before {
 .sidebar-user {
   padding: 20px;
   margin: 12px 16px 16px;
-  background: var(--bg-hover);
+  background: #e2e8f0;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
 }
@@ -472,7 +472,7 @@ body::before {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  background: var(--bg-hover);
+  background: #d1d9e6;
   padding: 6px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
@@ -533,8 +533,8 @@ body::before {
 
 /* ============ OVERVIEW CARD - Gradient ============ */
 .overview-card {
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-  border: 1px solid var(--border);
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
   border-radius: var(--radius);
   padding: 32px;
   position: relative;
@@ -958,7 +958,7 @@ th {
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  background: var(--bg-hover);
+  background: #e2e8f0;
   border-bottom: 1px solid var(--border);
 }
 
@@ -973,7 +973,7 @@ td {
 tr:last-child td { border-bottom: none; }
 
 tr:hover td {
-  background: #f8fafc;
+  background: #e8eef5;
 }
 
 td b {
@@ -1030,7 +1030,7 @@ td small {
   gap: 16px;
   margin-bottom: 20px;
   padding: 20px;
-  background: var(--bg-hover);
+  background: #dbe4ed;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   min-width: 0;
@@ -1076,8 +1076,8 @@ td small {
   right: 0;
   bottom: 0;
   background: 
-    linear-gradient(135deg, #eff6ff 0%, #ffffff 50%, #f0f9ff 100%),
-    radial-gradient(ellipse 60% 40% at 100% 20%, rgba(59, 130, 246, 0.08), transparent);
+    linear-gradient(135deg, #dbeafe 0%, #e0e7ef 50%, #bfdbfe 100%),
+    radial-gradient(ellipse 60% 40% at 100% 20%, rgba(59, 130, 246, 0.12), transparent);
   pointer-events: none;
 }
 
@@ -1128,7 +1128,7 @@ td small {
 .demo-info {
   margin-top: 28px;
   padding: 20px;
-  background: var(--bg-hover);
+  background: #dbe4ed;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
 }
@@ -1238,8 +1238,8 @@ td small {
 .days-counter {
   margin-bottom: 28px;
   padding: 32px;
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-  border: 1px solid var(--border);
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
   border-radius: var(--radius);
   text-align: center;
   box-shadow: var(--shadow-sm);
