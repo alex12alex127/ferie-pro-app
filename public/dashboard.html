@@ -10,55 +10,107 @@
   <div class="app-layout">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <h1>🚀 Portal Manager</h1>
+        <h1>Portal Manager</h1>
         <small>Gestione Aziendale</small>
       </div>
       <nav class="sidebar-nav" id="main-nav"></nav>
       <div class="sidebar-user">
         <div class="user-name" id="user-name"></div>
         <div class="user-role" id="user-role"></div>
-        <button class="btn-logout" onclick="Auth.logout()">Esci</button>
+        <button class="btn-logout" onclick="Auth.logout()">Esci dall'account</button>
       </div>
     </aside>
     <div class="sidebar-overlay" id="overlay" onclick="toggleMenu()"></div>
+    
     <main class="main-content">
       <header class="topbar">
         <button class="menu-toggle" onclick="toggleMenu()">☰</button>
         <div class="topbar-left">
           <h2 id="greeting">Buongiorno</h2>
-          <p>Ecco la panoramica delle attività</p>
+          <p>Panoramica attività aziendali</p>
         </div>
         <div></div>
       </header>
+      
       <div class="container">
-        <div class="overview-card" style="margin-bottom:20px">
-          <h3>📊 Panoramica Rapida</h3>
-          <p>Riepilogo richieste ferie</p>
+        <!-- Overview Stats -->
+        <div class="overview-card" style="margin-bottom:24px">
+          <h3>Panoramica Richieste</h3>
+          <p>Riepilogo delle richieste ferie del team</p>
           <div class="overview-stats">
-            <div class="stat-item"><div class="value" id="kpi-total">0</div><div class="label">Totale</div></div>
-            <div class="stat-item"><div class="value" id="kpi-pending">0</div><div class="label">In Attesa</div></div>
-            <div class="stat-item"><div class="value" id="kpi-approved">0</div><div class="label">Approvate</div></div>
-            <div class="stat-item"><div class="value" id="kpi-month">0</div><div class="label">Questo Mese</div></div>
+            <div class="stat-item">
+              <div class="value" id="kpi-total">0</div>
+              <div class="label">Totale</div>
+            </div>
+            <div class="stat-item">
+              <div class="value" id="kpi-pending">0</div>
+              <div class="label">In Attesa</div>
+            </div>
+            <div class="stat-item">
+              <div class="value" id="kpi-approved">0</div>
+              <div class="label">Approvate</div>
+            </div>
+            <div class="stat-item">
+              <div class="value" id="kpi-month">0</div>
+              <div class="label">Questo Mese</div>
+            </div>
           </div>
         </div>
+        
+        <!-- Requests Table -->
         <div class="card">
-          <h3>📋 Gestione Richieste</h3>
+          <h3>Gestione Richieste</h3>
+          
           <div class="filters">
-            <div class="form-group"><label>Cerca</label><input type="text" id="filter-text" placeholder="Nome, email..."></div>
-            <div class="form-group"><label>Stato</label><select id="filter-status"><option value="">Tutti</option><option>In attesa</option><option>Approvata</option><option>Rifiutata</option></select></div>
-            <div class="form-group"><label>Da</label><input type="date" id="filter-from"></div>
-            <div class="form-group"><label>A</label><input type="date" id="filter-to"></div>
+            <div class="form-group">
+              <label>Cerca dipendente</label>
+              <input type="text" id="filter-text" placeholder="Nome, email, reparto...">
+            </div>
+            <div class="form-group">
+              <label>Stato</label>
+              <select id="filter-status">
+                <option value="">Tutti gli stati</option>
+                <option>In attesa</option>
+                <option>Approvata</option>
+                <option>Rifiutata</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Data inizio</label>
+              <input type="date" id="filter-from">
+            </div>
+            <div class="form-group">
+              <label>Data fine</label>
+              <input type="date" id="filter-to">
+            </div>
           </div>
+          
           <div class="toolbar">
-            <button id="btn-refresh" class="btn-secondary btn-sm">🔄 Aggiorna</button>
-            <button class="btn-ghost btn-sm" onclick="exportData('csv')">📥 CSV</button>
-            <button class="btn-ghost btn-sm" onclick="exportData('json')">📥 JSON</button>
+            <button id="btn-refresh" class="btn-secondary btn-sm">Aggiorna</button>
+            <button class="btn-ghost btn-sm" onclick="exportData('csv')">Esporta CSV</button>
+            <button class="btn-ghost btn-sm" onclick="exportData('json')">Esporta JSON</button>
           </div>
-          <div class="table-wrap"><table><thead><tr><th>Dipendente</th><th class="hide-mobile">Reparto</th><th>Periodo</th><th>Giorni</th><th>Stato</th><th>Azioni</th></tr></thead><tbody id="requests-list"></tbody></table></div>
+          
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Dipendente</th>
+                  <th class="hide-mobile">Reparto</th>
+                  <th>Periodo</th>
+                  <th>Giorni</th>
+                  <th>Stato</th>
+                  <th>Azioni</th>
+                </tr>
+              </thead>
+              <tbody id="requests-list"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </main>
   </div>
+  
   <script src="/js/auth.js"></script>
   <script src="/js/app.js"></script>
   <script>initDashboard();</script>

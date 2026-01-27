@@ -10,38 +10,43 @@
   <div class="app-layout">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <h1>🚀 Portal Manager</h1>
+        <h1>Portal Manager</h1>
         <small>Gestione Aziendale</small>
       </div>
       <nav class="sidebar-nav" id="main-nav"></nav>
       <div class="sidebar-user">
         <div class="user-name" id="user-name"></div>
         <div class="user-role" id="user-role"></div>
-        <button class="btn-logout" onclick="Auth.logout()">Esci</button>
+        <button class="btn-logout" onclick="Auth.logout()">Esci dall'account</button>
       </div>
     </aside>
     <div class="sidebar-overlay" id="overlay" onclick="toggleMenu()"></div>
+    
     <main class="main-content">
       <header class="topbar">
         <button class="menu-toggle" onclick="toggleMenu()">☰</button>
         <div class="topbar-left">
           <h2>Calendario Ferie</h2>
-          <p>Visualizza le ferie approvate</p>
+          <p>Visualizza le assenze del team</p>
         </div>
         <div></div>
       </header>
+      
       <div class="container">
         <div class="card">
           <div class="calendar-header">
-            <button class="btn-ghost btn-sm" onclick="prevMonth()">← Precedente</button>
-            <h3 id="month-label" style="margin:0"></h3>
-            <button class="btn-ghost btn-sm" onclick="nextMonth()">Successivo →</button>
+            <h3 id="month-label">Gennaio 2026</h3>
+            <div>
+              <button class="btn-ghost btn-sm" onclick="prevMonth()">← Precedente</button>
+              <button class="btn-ghost btn-sm" onclick="nextMonth()">Successivo →</button>
+            </div>
           </div>
-          <div id="calendar-grid" class="calendar-grid"></div>
+          <div class="calendar-grid" id="calendar-grid"></div>
         </div>
       </div>
     </main>
   </div>
+  
   <script src="/js/auth.js"></script>
   <script src="/js/app.js"></script>
   <script>initCalendar();</script>

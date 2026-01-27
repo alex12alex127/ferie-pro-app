@@ -33,25 +33,19 @@ function renderNav(active) {
   
   const sections = [
     { title: 'Principale', items: [
-      { k: 'request', l: 'Ferie', h: '/request.html', i: '🏖️' },
-      { k: 'timbrature', l: 'Presenze', h: '/timbrature.html', i: '⏰' },
-      { k: 'rapportini', l: 'Rapportini', h: '/rapportini.html', i: '📝' },
-      { k: 'calendar', l: 'Calendario', h: '/calendar.html', i: '📅' },
+      { k: 'request', l: 'Richiedi Ferie', h: '/request.html', i: '✈️' },
+      { k: 'calendar', l: 'Calendario', h: '/calendar.html', i: '📆' },
     ]},
     { title: 'Operativo', items: [
       { k: 'cantieri', l: 'Cantieri', h: '/cantieri.html', i: '🏗️', m: true },
-      { k: 'materiale', l: 'Materiale', h: '/materiale.html', i: '📦' },
-      { k: 'attrezzature', l: 'Attrezzature', h: '/attrezzature.html', i: '🔧', m: true },
-      { k: 'veicoli', l: 'Veicoli', h: '/veicoli.html', i: '🚐', m: true },
+      { k: 'avvisi', l: 'Bacheca Avvisi', h: '/avvisi.html', i: '📣' },
     ]},
     { title: 'Gestione', items: [
-      { k: 'scadenze', l: 'Scadenze', h: '/scadenze.html', i: '📋', m: true },
-      { k: 'avvisi', l: 'Avvisi', h: '/avvisi.html', i: '📢' },
       { k: 'dashboard', l: 'Dashboard', h: '/dashboard.html', i: '📊', m: true },
-      { k: 'admin', l: 'Admin', h: '/admin.html', i: '⚙️', a: true },
+      { k: 'admin', l: 'Amministrazione', h: '/admin.html', i: '⚙️', a: true },
     ]},
     { title: 'Account', items: [
-      { k: 'profile', l: 'Il Mio Profilo', h: '/profile.html', i: '👤' },
+      { k: 'profile', l: 'Profilo', h: '/profile.html', i: '👤' },
     ]}
   ];
   
@@ -301,200 +295,6 @@ async function initCantieri() {
   load();
 }
 
-// RAPPORTINI
-async function initRapportini() {
-  if (!Auth.requireAuth()) return;
-  renderNav('rapportini');
-  const list = $('#list'), filter = $('#filter'), form = $('#form'), alert = $('#alert');
-  let all = [], cantieri = [];
-  async function load() {
-    [all, cantieri] = await Promise.all([API.get('/api/rapportini'), API.get('/api/cantieri')]);
-    form.cantiere_id.innerHTML = '<option value="">Seleziona...</option>' + (cantieri || []).filter(c => c.stato === 'Attivo').map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
-    form.data.value = new Date().toISOString().slice(0, 10);
-    render();
-  }
-  function render() {
-    const q = (filter.value || '').toLowerCase();
-    const f = (all || []).filter(r => !q || [r.cantiere_nome, r.user_name, r.descrizione].join(' ').toLowerCase().includes(q));
-    list.innerHTML = f.length ? f.map(r => `<tr><td><b>${fmtDate(r.data)}</b></td><td>${esc(r.cantiere_nome || '-')}</td><td>${r.ore}h</td><td class="hide-mobile">${esc(r.user_name)}</td></tr>`).join('') : '<tr><td colspan="4">Nessun rapportino.</td></tr>';
-  }
-  form.addEventListener('submit', async e => {
-    e.preventDefault(); alert.classList.add('hidden');
-    try { await API.post('/api/rapportini', { cantiere_id: form.cantiere_id.value, data: form.data.value, ore: form.ore.value, descrizione: form.descrizione.value, materiali: form.materiali.value, problemi: form.problemi.value }); alert.textContent = 'Rapportino inviato!'; alert.className = 'alert alert-success'; alert.classList.remove('hidden'); form.reset(); form.data.value = new Date().toISOString().slice(0, 10); load(); }
-    catch { alert.textContent = 'Errore'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
-  });
-  filter.addEventListener('input', render);
-  load();
-}
-
-// TIMBRATURE
-async function initTimbrature() {
-  if (!Auth.requireAuth()) return;
-  renderNav('timbrature');
-  const list = $('#list'), filter = $('#filter'), filterMese = $('#filter-mese'), cantiereSel = $('#cantiere-timbra'), timbraAlert = $('#timbra-alert');
-  let all = [], cantieri = [];
-  filterMese.value = new Date().toISOString().slice(0, 7);
-  function updateOra() { $('#ora-attuale').textContent = new Date().toLocaleTimeString('it-IT'); }
-  setInterval(updateOra, 1000); updateOra();
-  async function load() {
-    [all, cantieri] = await Promise.all([API.get('/api/timbrature'), API.get('/api/cantieri')]);
-    cantiereSel.innerHTML = '<option value="">Cantiere (opzionale)</option>' + (cantieri || []).filter(c => c.stato === 'Attivo').map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
-    render();
-  }
-  function render() {
-    const q = (filter.value || '').toLowerCase(), mese = filterMese.value;
-    const f = (all || []).filter(t => (!q || [t.user_name, t.cantiere_nome].join(' ').toLowerCase().includes(q)) && (!mese || t.data.startsWith(mese)));
-    list.innerHTML = f.length ? f.map(t => `<tr><td><b>${fmtDate(t.data)}</b></td><td>${t.ora}</td><td><span class="badge ${t.tipo === 'Entrata' ? 'badge-approved' : 'badge-rejected'}">${t.tipo}</span></td><td class="hide-mobile">${esc(t.cantiere_nome || '-')}</td><td class="hide-mobile">${esc(t.user_name)}</td></tr>`).join('') : '<tr><td colspan="5">Nessuna timbratura.</td></tr>';
-  }
-  window.timbra = async tipo => {
-    timbraAlert.classList.add('hidden');
-    try {
-      const res = await API.post('/api/timbrature', { cantiere_id: cantiereSel.value || null, tipo });
-      timbraAlert.textContent = `${tipo} registrata alle ${res.ora}`; timbraAlert.className = 'alert alert-success'; timbraAlert.classList.remove('hidden');
-      load();
-    } catch { timbraAlert.textContent = 'Errore'; timbraAlert.className = 'alert alert-error'; timbraAlert.classList.remove('hidden'); }
-  };
-  filter.addEventListener('input', render);
-  filterMese.addEventListener('change', render);
-  load();
-}
-
-// SCADENZE
-async function initScadenze() {
-  if (!Auth.requireAuth()) return;
-  renderNav('scadenze');
-  const list = $('#list'), filterTipo = $('#filter-tipo'), form = $('#form'), alert = $('#alert');
-  let all = [], users = [];
-  async function load() {
-    [all, users] = await Promise.all([API.get('/api/scadenze'), API.get('/api/users').catch(() => [])]);
-    form.user_id.innerHTML = '<option value="">Aziendale</option>' + (users || []).map(u => `<option value="${u.id}">${esc(u.name)}</option>`).join('');
-    render();
-  }
-  function render() {
-    const tipo = filterTipo.value;
-    const f = (all || []).filter(s => !tipo || s.tipo === tipo);
-    list.innerHTML = f.length ? f.map(s => {
-      const exp = isExpired(s.data_scadenza), expiring = isExpiring(s.data_scadenza);
-      return `<tr><td><b>${esc(s.descrizione)}</b><br><small>${esc(s.user_name || 'Aziendale')}</small></td><td>${esc(s.tipo)}</td><td style="color:${exp ? 'var(--danger)' : expiring ? 'var(--warning)' : 'inherit'}">${fmtDate(s.data_scadenza)} ${exp ? '⚠️' : expiring ? '⏰' : ''}</td><td><span class="badge ${s.stato === 'Attiva' ? 'badge-pending' : 'badge-approved'}">${esc(s.stato)}</span></td><td><button class="btn-sm btn-ghost" onclick="completeScad(${s.id})">✓</button></td></tr>`;
-    }).join('') : '<tr><td colspan="5">Nessuna scadenza.</td></tr>';
-  }
-  window.completeScad = async id => { await API.patch(`/api/scadenze/${id}`, { stato: 'Completata' }); load(); };
-  form.addEventListener('submit', async e => {
-    e.preventDefault(); alert.classList.add('hidden');
-    try { await API.post('/api/scadenze', { user_id: form.user_id.value || null, tipo: form.tipo.value, descrizione: form.descrizione.value, data_scadenza: form.data_scadenza.value }); alert.textContent = 'Aggiunta!'; alert.className = 'alert alert-success'; alert.classList.remove('hidden'); form.reset(); load(); }
-    catch { alert.textContent = 'Errore'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
-  });
-  filterTipo.addEventListener('change', render);
-  load();
-}
-
-// ATTREZZATURE
-async function initAttrezzature() {
-  if (!Auth.requireAuth()) return;
-  renderNav('attrezzature');
-  const list = $('#list'), filter = $('#filter'), filterStato = $('#filter-stato'), form = $('#form'), alert = $('#alert');
-  let all = [], editId = null, users = [], cantieri = [];
-  async function load() {
-    [all, users, cantieri] = await Promise.all([API.get('/api/attrezzature'), API.get('/api/users').catch(() => []), API.get('/api/cantieri')]);
-    form.assegnato_a.innerHTML = '<option value="">Nessuno</option>' + (users || []).map(u => `<option value="${u.id}">${esc(u.name)}</option>`).join('');
-    form.cantiere_id.innerHTML = '<option value="">Nessuno</option>' + (cantieri || []).filter(c => c.stato === 'Attivo').map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
-    render();
-  }
-  function render() {
-    const q = (filter.value || '').toLowerCase(), stato = filterStato.value;
-    const f = (all || []).filter(a => (!q || [a.nome, a.codice, a.categoria].join(' ').toLowerCase().includes(q)) && (!stato || a.stato === stato));
-    list.innerHTML = f.length ? f.map(a => `<tr><td><b>${esc(a.nome)}</b><br><small>${esc(a.categoria || '')}</small></td><td class="hide-mobile">${esc(a.codice || '-')}</td><td><span class="badge ${a.stato === 'Disponibile' ? 'badge-approved' : a.stato === 'Guasto' ? 'badge-rejected' : 'badge-pending'}">${esc(a.stato)}</span></td><td class="hide-mobile">${esc(a.assegnato_nome || '-')}</td><td><button class="btn-sm btn-secondary" onclick="editAttr(${a.id})">✏️</button></td></tr>`).join('') : '<tr><td colspan="5">Nessuna attrezzatura.</td></tr>';
-  }
-  window.editAttr = id => {
-    const a = all.find(x => x.id === id);
-    if (!a) return;
-    editId = id;
-    form.id.value = id; form.nome.value = a.nome; form.codice.value = a.codice || ''; form.categoria.value = a.categoria || ''; form.assegnato_a.value = a.assegnato_a || ''; form.cantiere_id.value = a.cantiere_id || ''; form.stato.value = a.stato; form.note.value = a.note || '';
-    $('#form-title').textContent = 'Modifica Attrezzatura';
-  };
-  window.resetForm = () => { editId = null; form.reset(); $('#form-title').textContent = 'Nuova Attrezzatura'; };
-  form.addEventListener('submit', async e => {
-    e.preventDefault(); alert.classList.add('hidden');
-    const data = { nome: form.nome.value, codice: form.codice.value, categoria: form.categoria.value, assegnato_a: form.assegnato_a.value || null, cantiere_id: form.cantiere_id.value || null, stato: form.stato.value, note: form.note.value };
-    try {
-      if (editId) await API.patch(`/api/attrezzature/${editId}`, data);
-      else await API.post('/api/attrezzature', data);
-      alert.textContent = 'Salvato!'; alert.className = 'alert alert-success'; alert.classList.remove('hidden');
-      resetForm(); load();
-    } catch { alert.textContent = 'Errore'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
-  });
-  filter.addEventListener('input', render);
-  filterStato.addEventListener('change', render);
-  load();
-}
-
-// VEICOLI
-async function initVeicoli() {
-  if (!Auth.requireAuth()) return;
-  renderNav('veicoli');
-  const list = $('#list'), form = $('#form'), alert = $('#alert');
-  let all = [], editId = null, users = [];
-  async function load() {
-    [all, users] = await Promise.all([API.get('/api/veicoli'), API.get('/api/users').catch(() => [])]);
-    form.assegnato_a.innerHTML = '<option value="">Nessuno</option>' + (users || []).map(u => `<option value="${u.id}">${esc(u.name)}</option>`).join('');
-    render();
-  }
-  function render() {
-    list.innerHTML = (all || []).length ? all.map(v => {
-      const scads = [{ l: 'B', d: v.scadenza_bollo }, { l: 'A', d: v.scadenza_assicurazione }, { l: 'R', d: v.scadenza_revisione }].filter(s => s.d);
-      const scadHtml = scads.map(s => `<small style="color:${isExpired(s.d) ? 'var(--danger)' : isExpiring(s.d) ? 'var(--warning)' : 'inherit'}">${s.l}: ${fmtDate(s.d)}</small>`).join('<br>');
-      return `<tr><td><b>${esc(v.targa)}</b><br><small>${esc(v.modello)}</small></td><td class="hide-mobile">${esc(v.assegnato_nome || '-')}</td><td class="hide-mobile">${v.km_attuali || 0} km</td><td>${scadHtml || '-'}</td><td><button class="btn-sm btn-secondary" onclick="editVeic(${v.id})">✏️</button></td></tr>`;
-    }).join('') : '<tr><td colspan="5">Nessun veicolo.</td></tr>';
-  }
-  window.editVeic = id => {
-    const v = all.find(x => x.id === id);
-    if (!v) return;
-    editId = id;
-    form.id.value = id; form.targa.value = v.targa; form.modello.value = v.modello; form.assegnato_a.value = v.assegnato_a || ''; form.km_attuali.value = v.km_attuali || ''; form.scadenza_bollo.value = v.scadenza_bollo || ''; form.scadenza_assicurazione.value = v.scadenza_assicurazione || ''; form.scadenza_revisione.value = v.scadenza_revisione || ''; form.note.value = v.note || '';
-    $('#form-title').textContent = 'Modifica Veicolo';
-    form.targa.disabled = true;
-  };
-  window.resetForm = () => { editId = null; form.reset(); form.targa.disabled = false; $('#form-title').textContent = 'Nuovo Veicolo'; };
-  form.addEventListener('submit', async e => {
-    e.preventDefault(); alert.classList.add('hidden');
-    const data = { targa: form.targa.value, modello: form.modello.value, assegnato_a: form.assegnato_a.value || null, km_attuali: parseInt(form.km_attuali.value) || null, scadenza_bollo: form.scadenza_bollo.value, scadenza_assicurazione: form.scadenza_assicurazione.value, scadenza_revisione: form.scadenza_revisione.value, note: form.note.value };
-    try {
-      if (editId) await API.patch(`/api/veicoli/${editId}`, data);
-      else await API.post('/api/veicoli', data);
-      alert.textContent = 'Salvato!'; alert.className = 'alert alert-success'; alert.classList.remove('hidden');
-      resetForm(); load();
-    } catch { alert.textContent = 'Errore'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
-  });
-  load();
-}
-
-// MATERIALE
-async function initMateriale() {
-  if (!Auth.requireAuth()) return;
-  renderNav('materiale');
-  const list = $('#list'), filterStato = $('#filter-stato'), form = $('#form'), alert = $('#alert');
-  let all = [], cantieri = [];
-  const isM = ['manager', 'admin'].includes(Auth.getUser().role);
-  async function load() {
-    [all, cantieri] = await Promise.all([API.get('/api/materiale'), API.get('/api/cantieri')]);
-    form.cantiere_id.innerHTML = '<option value="">Nessuno</option>' + (cantieri || []).filter(c => c.stato === 'Attivo').map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
-    render();
-  }
-  function render() {
-    const stato = filterStato.value;
-    const f = (all || []).filter(m => !stato || m.stato === stato);
-    list.innerHTML = f.length ? f.map(m => `<tr><td><b>${esc(m.materiale.slice(0, 50))}${m.materiale.length > 50 ? '...' : ''}</b><br><small>${esc(m.user_name)} - ${m.quantita || '-'}</small></td><td class="hide-mobile">${esc(m.cantiere_nome || '-')}</td><td><span class="badge ${badge(m.stato)}">${esc(m.stato)}</span></td><td>${isM ? `<button class="btn-sm btn-secondary" onclick="approvaMat(${m.id},'Approvata')">✓</button> <button class="btn-sm btn-ghost" onclick="approvaMat(${m.id},'Consegnato')">📦</button>` : ''}</td></tr>`).join('') : '<tr><td colspan="4">Nessuna richiesta.</td></tr>';
-  }
-  window.approvaMat = async (id, stato) => { await API.patch(`/api/materiale/${id}/status`, { stato }); load(); };
-  form.addEventListener('submit', async e => {
-    e.preventDefault(); alert.classList.add('hidden');
-    try { await API.post('/api/materiale', { cantiere_id: form.cantiere_id.value || null, materiale: form.materiale.value, quantita: form.quantita.value, urgenza: form.urgenza.value, note: form.note.value }); alert.textContent = 'Richiesta inviata!'; alert.className = 'alert alert-success'; alert.classList.remove('hidden'); form.reset(); load(); }
-    catch { alert.textContent = 'Errore'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
-  });
-  filterStato.addEventListener('change', render);
-  load();
-}
-
 // AVVISI
 async function initAvvisi() {
   if (!Auth.requireAuth()) return;
@@ -504,7 +304,23 @@ async function initAvvisi() {
   if (!isM) formCard.style.display = 'none';
   async function load() {
     const avvisi = await API.get('/api/avvisi') || [];
-    avvisiList.innerHTML = avvisi.length ? avvisi.map(a => `<div class="card" style="margin-bottom:12px;border-left:4px solid ${a.priorita === 'Urgente' ? 'var(--danger)' : a.priorita === 'Alta' ? 'var(--warning)' : 'var(--primary)'}"><div style="display:flex;justify-content:space-between;align-items:start"><div><b>${esc(a.titolo)}</b><p style="margin:8px 0;color:var(--text-light)">${esc(a.messaggio)}</p><small style="color:var(--text-muted)">${fmtDate(a.created_at)}</small></div>${isM ? `<button class="btn-sm btn-ghost" onclick="delAvviso(${a.id})">×</button>` : ''}</div></div>`).join('') : '<p style="color:var(--text-muted)">Nessun avviso.</p>';
+    const prioColor = p => p === 'Urgente' ? 'var(--danger)' : p === 'Alta' ? 'var(--warning)' : 'var(--primary)';
+    const prioIcon = p => p === 'Urgente' ? '🔴' : p === 'Alta' ? '🟡' : '🔵';
+    avvisiList.innerHTML = avvisi.length ? avvisi.map(a => `
+      <div class="card" style="margin-bottom:16px;border-left:3px solid ${prioColor(a.priorita)};padding:20px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <span>${prioIcon(a.priorita)}</span>
+              <b style="font-size:15px">${esc(a.titolo)}</b>
+            </div>
+            <p style="margin:0 0 12px;color:var(--text-secondary);line-height:1.6">${esc(a.messaggio)}</p>
+            <small style="color:var(--text-muted)">${fmtDate(a.created_at)}</small>
+          </div>
+          ${isM ? `<button class="btn-sm btn-ghost" onclick="delAvviso(${a.id})" style="flex-shrink:0">×</button>` : ''}
+        </div>
+      </div>
+    `).join('') : '<div style="text-align:center;padding:40px;color:var(--text-muted)"><p>Nessun avviso pubblicato</p></div>';
   }
   window.delAvviso = async id => { if (confirm('Eliminare avviso?')) { await API.delete(`/api/avvisi/${id}`); load(); } };
   form?.addEventListener('submit', async e => {
