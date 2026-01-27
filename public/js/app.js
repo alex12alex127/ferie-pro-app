@@ -62,13 +62,12 @@ async function loadCompanyLogo() {
     const res = await fetch('/api/settings/logo');
     const data = await res.json();
     const logo = $('#company-logo');
-    if (logo) {
-      if (data?.hasLogo && data?.logoUrl) {
-        logo.src = data.logoUrl;
-        logo.style.display = 'block';
-      } else {
-        logo.style.display = 'none';
-      }
+    const frame = $('#logo-frame');
+    if (data?.hasLogo && data?.logoUrl) {
+      if (logo) logo.src = data.logoUrl;
+      if (frame) frame.style.display = 'flex';
+    } else {
+      if (frame) frame.style.display = 'none';
     }
   } catch {}
 }
@@ -505,10 +504,8 @@ async function initAdmin() {
           $('#btn-remove-logo').style.display = 'inline-flex';
           showLogoAlert('Logo caricato con successo!', 'success');
           // Update sidebar logo
-          document.querySelectorAll('.company-logo').forEach(img => {
-            img.src = res.logoUrl;
-            img.style.display = 'block';
-          });
+          document.querySelectorAll('.company-logo').forEach(img => img.src = res.logoUrl);
+          document.querySelectorAll('.logo-frame').forEach(f => f.style.display = 'flex');
         } catch {
           showLogoAlert('Errore nel caricamento', 'error');
         }
@@ -525,7 +522,7 @@ async function initAdmin() {
       $('#no-logo-text').style.display = 'block';
       $('#btn-remove-logo').style.display = 'none';
       showLogoAlert('Logo rimosso', 'success');
-      document.querySelectorAll('.company-logo').forEach(img => img.style.display = 'none');
+      document.querySelectorAll('.logo-frame').forEach(f => f.style.display = 'none');
     } catch {
       showLogoAlert('Errore', 'error');
     }
