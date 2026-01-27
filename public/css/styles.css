@@ -25,6 +25,12 @@
   --accent-light: #22d3ee;
   --accent-glow: rgba(6, 182, 212, 0.4);
   
+  /* Blue chiaro */
+  --blue-light: #7dd3fc;
+  --blue-light-soft: #38bdf8;
+  --blue-light-bg: rgba(56, 189, 248, 0.12);
+  --blue-light-glow: rgba(56, 189, 248, 0.35);
+  
   /* Secondary - Purple */
   --secondary: #a855f7;
   --secondary-light: #c084fc;
@@ -116,7 +122,8 @@ body::before {
   bottom: 0;
   background: 
     radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.15), transparent),
-    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(6, 182, 212, 0.1), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(56, 189, 248, 0.14), transparent),
+    radial-gradient(ellipse 50% 35% at 0% 80%, rgba(125, 211, 252, 0.08), transparent),
     radial-gradient(ellipse 40% 30% at 0% 100%, rgba(168, 85, 247, 0.08), transparent);
   pointer-events: none;
   z-index: 0;
@@ -164,19 +171,19 @@ body::before {
   width: 52px;
   height: 52px;
   border-radius: 12px;
-  background: linear-gradient(145deg, rgba(99, 102, 241, 0.15), rgba(6, 182, 212, 0.1));
-  border: 2px solid rgba(99, 102, 241, 0.3);
+  background: linear-gradient(145deg, rgba(99, 102, 241, 0.15), rgba(56, 189, 248, 0.12), rgba(6, 182, 212, 0.1));
+  border: 2px solid rgba(56, 189, 248, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15), inset 0 1px 0 rgba(255,255,255,0.05);
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2), inset 0 1px 0 rgba(255,255,255,0.05);
   transition: all 0.3s ease;
 }
 
 .logo-frame:hover {
-  border-color: var(--primary);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.25);
+  border-color: var(--blue-light-soft);
+  box-shadow: 0 6px 20px var(--blue-light-glow);
   transform: scale(1.02);
 }
 
@@ -195,7 +202,7 @@ body::before {
 .sidebar-header h1 {
   font-size: 22px;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--primary-light) 0%, var(--accent) 100%);
+  background: linear-gradient(135deg, var(--primary-light) 0%, var(--blue-light-soft) 50%, var(--accent) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -266,7 +273,7 @@ body::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--blue-light-soft) 50%, var(--secondary) 100%);
   opacity: 0;
   transition: var(--transition);
 }
@@ -286,7 +293,7 @@ body::before {
 }
 
 .sidebar-nav a.active {
-  box-shadow: 0 4px 20px var(--primary-glow);
+  box-shadow: 0 4px 20px var(--primary-glow), 0 0 30px var(--blue-light-glow);
 }
 
 .sidebar-nav a .icon {
@@ -454,7 +461,8 @@ body::before {
 
 .menu-toggle:hover {
   background: var(--bg-hover);
-  border-color: var(--primary);
+  border-color: var(--blue-light-soft);
+  box-shadow: 0 0 16px var(--blue-light-bg);
 }
 
 /* Container */
@@ -498,9 +506,9 @@ body::before {
 }
 
 .tab.active {
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--blue-light-soft) 100%);
   color: white;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3), 0 0 16px var(--blue-light-glow);
 }
 
 /* ============ CARDS - Glassmorphism ============ */
@@ -516,8 +524,8 @@ body::before {
 }
 
 .card:hover {
-  border-color: var(--border-glow);
-  box-shadow: var(--shadow-md);
+  border-color: rgba(56, 189, 248, 0.25);
+  box-shadow: var(--shadow-md), 0 0 24px var(--blue-light-bg);
 }
 
 .card h3 {
@@ -599,7 +607,7 @@ body::before {
 .stat-item .value {
   font-size: 36px;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--primary-light) 0%, var(--accent) 100%);
+  background: linear-gradient(135deg, var(--primary-light) 0%, var(--blue-light) 50%, var(--accent) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -640,7 +648,7 @@ body::before {
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+  background: linear-gradient(90deg, var(--primary) 0%, var(--blue-light-soft) 50%, var(--accent) 100%);
   opacity: 0;
   transition: var(--transition);
 }
@@ -718,7 +726,7 @@ button::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+  background: linear-gradient(135deg, var(--blue-light-soft) 0%, var(--primary-light) 50%, var(--primary) 100%);
   opacity: 0;
   transition: var(--transition);
 }
@@ -734,7 +742,7 @@ button span, button:not(:empty) {
 
 button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px var(--primary-glow);
+  box-shadow: 0 8px 24px var(--primary-glow), 0 4px 16px var(--blue-light-glow);
 }
 
 button:active {
@@ -748,11 +756,11 @@ button:disabled {
 }
 
 .btn-secondary {
-  background: linear-gradient(135deg, var(--accent) 0%, #0891b2 100%);
+  background: linear-gradient(135deg, var(--blue-light-soft) 0%, var(--accent) 100%);
 }
 
 .btn-secondary:hover {
-  box-shadow: 0 8px 24px var(--accent-glow);
+  box-shadow: 0 8px 24px var(--accent-glow), 0 4px 16px var(--blue-light-glow);
 }
 
 .btn-ghost {
@@ -764,9 +772,9 @@ button:disabled {
 .btn-ghost::before { display: none; }
 
 .btn-ghost:hover {
-  background: var(--bg-hover);
-  border-color: var(--primary);
-  color: var(--primary-light);
+  background: var(--blue-light-bg);
+  border-color: var(--blue-light-soft);
+  color: var(--blue-light);
   box-shadow: none;
   transform: none;
 }
@@ -816,8 +824,8 @@ input, select, textarea {
 
 input:focus, select:focus, textarea:focus {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 4px var(--primary-glow);
+  border-color: var(--blue-light-soft);
+  box-shadow: 0 0 0 4px var(--blue-light-bg);
   background: var(--bg-surface);
 }
 
@@ -887,7 +895,7 @@ textarea {
   width: 70px;
   height: 70px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  background: linear-gradient(135deg, var(--primary), var(--blue-light-soft), var(--secondary));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -903,7 +911,7 @@ textarea {
 
 .profile-avatar:hover {
   transform: scale(1.05);
-  box-shadow: 0 6px 25px var(--primary-glow);
+  box-shadow: 0 6px 25px var(--primary-glow), 0 0 20px var(--blue-light-glow);
 }
 
 .profile-avatar::after {
@@ -928,7 +936,7 @@ textarea {
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  background: linear-gradient(135deg, var(--primary), var(--blue-light-soft), var(--secondary));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1020,6 +1028,12 @@ td small {
   color: var(--danger);
 }
 
+.badge-info {
+  background: var(--blue-light-bg);
+  border-color: rgba(56, 189, 248, 0.35);
+  color: var(--blue-light-soft);
+}
+
 /* ============ FILTERS ============ */
 .filters {
   display: grid;
@@ -1074,7 +1088,8 @@ td small {
   bottom: 0;
   background: 
     radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.2), transparent),
-    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(6, 182, 212, 0.15), transparent),
+    radial-gradient(ellipse 70% 45% at 80% 20%, rgba(56, 189, 248, 0.18), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(125, 211, 252, 0.12), transparent),
     radial-gradient(ellipse 40% 30% at 0% 100%, rgba(168, 85, 247, 0.1), transparent);
   pointer-events: none;
 }
@@ -1102,7 +1117,7 @@ td small {
   text-align: center;
   font-size: 32px;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--primary-light) 0%, var(--accent) 100%);
+  background: linear-gradient(135deg, var(--primary-light) 0%, var(--blue-light) 50%, var(--accent) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1117,13 +1132,13 @@ td small {
 }
 
 .login-card a {
-  color: var(--primary-light);
+  color: var(--blue-light-soft);
   text-decoration: none;
   transition: var(--transition-fast);
 }
 
 .login-card a:hover {
-  color: var(--accent);
+  color: var(--blue-light);
 }
 
 .demo-info {
@@ -1211,9 +1226,9 @@ td small {
 }
 
 .cal-day.today {
-  border-color: var(--primary);
-  background: rgba(99, 102, 241, 0.1);
-  box-shadow: 0 0 20px var(--primary-glow);
+  border-color: var(--blue-light-soft);
+  background: var(--blue-light-bg);
+  box-shadow: 0 0 20px var(--primary-glow), 0 0 16px var(--blue-light-glow);
 }
 
 .day-num {
@@ -1266,7 +1281,7 @@ td small {
 
 .days-bar {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+  background: linear-gradient(90deg, var(--primary) 0%, var(--blue-light-soft) 50%, var(--accent) 100%);
   border-radius: 5px;
   transition: width 1s ease;
 }
