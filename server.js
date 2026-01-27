@@ -720,7 +720,9 @@ app.get('/api/backup', auth, isAdmin, (req, res) => {
         avvisi: db.prepare('SELECT * FROM avvisi').all(),
         cantieri: db.prepare('SELECT * FROM cantieri').all(),
         cantieri_assegnazioni: db.prepare('SELECT * FROM cantieri_assegnazioni').all(),
-        notifications: db.prepare('SELECT * FROM notifications').all()
+        notifications: db.prepare('SELECT * FROM notifications').all(),
+        dpi_catalogo: db.prepare('SELECT * FROM dpi_catalogo').all(),
+        dpi_assegnazioni: db.prepare('SELECT * FROM dpi_assegnazioni').all()
       }
     };
     res.setHeader('Content-Type', 'application/json');
@@ -793,6 +795,20 @@ app.post('/api/restore', auth, isAdmin, (req, res) => {
         const insertNotif = db.prepare('INSERT INTO notifications (id, user_id, message, read, created_at) VALUES (?, ?, ?, ?, ?)');
         data.notifications.forEach(n => insertNotif.run(n.id, n.user_id, n.message, n.read, n.created_at));
       }
+      
+      // Ripristina catalogo DPI
+      if (data.dpi_catalogo) {
+        db.prepare('DELETE FROM dpi_catalogo').run();
+        const insertDpi = db.prepare('INSERT INTO dpi_catalogo (id, nome, categoria, descrizione, taglia_disponibili, created_at) VALUES (?, ?, ?, ?, ?, ?)');
+        data.dpi_catalogo.forEach(d => insertDpi.run(d.id, d.nome, d.categoria, d.descrizione, d.taglia_disponibili, d.created_at));
+      }
+      
+      // Ripristina assegnazioni DPI
+      if (data.dpi_assegnazioni) {
+        db.prepare('DELETE FROM dpi_assegnazioni').run();
+        const insertDpiAss = db.prepare('INSERT INTO dpi_assegnazioni (id, user_id, dpi_id, taglia, quantita, data_consegna, data_scadenza, note, stato, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        data.dpi_assegnazioni.forEach(a => insertDpiAss.run(a.id, a.user_id, a.dpi_id, a.taglia, a.quantita, a.data_consegna, a.data_scadenza, a.note, a.stato, a.created_at));
+      }
     });
     
     transaction();
@@ -803,7 +819,7 @@ app.post('/api/restore', auth, isAdmin, (req, res) => {
 });
 
 // HTML Routes
-const pages = ['/', '/index.html', '/register.html', '/request.html', '/dashboard.html', '/admin.html', '/calendar.html', '/cantieri.html', '/settings.html'];
+const pages = ['/', '/index.html', '/register.html', '/request.html', '/dashboard.html', '/admin.html', '/calendar.html', '/cantieri.html', '/settings.html', '/dpi.html'];
 pages.forEach(p => app.get(p, (req, res) => res.sendFile(path.join(__dirname, 'public', p === '/' ? 'index.html' : p))));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
