@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rapportini</title>
+  <title>Rapportini - Portal Manager</title>
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
@@ -24,7 +24,10 @@
     <main class="main-content">
       <header class="topbar">
         <button class="menu-toggle" onclick="toggleMenu()">☰</button>
-        <h2>Rapportini Lavoro</h2>
+        <div class="topbar-left">
+          <h2>Rapportini Lavoro</h2>
+          <p>Report giornalieri</p>
+        </div>
         <div></div>
       </header>
       <div class="container">
@@ -38,14 +41,14 @@
                 <div class="form-group"><label>Data</label><input type="date" name="data" required></div>
               </div>
               <div class="form-group"><label>Ore Lavorate</label><input type="number" name="ore" step="0.5" min="0.5" max="16" required></div>
-              <div class="form-group"><label>Descrizione Lavori</label><textarea name="descrizione" rows="2" required></textarea></div>
-              <div class="form-group"><label>Materiali Utilizzati</label><textarea name="materiali" rows="2" placeholder="Opzionale..."></textarea></div>
-              <div class="form-group"><label>Problemi Riscontrati</label><textarea name="problemi" rows="2" placeholder="Opzionale..."></textarea></div>
+              <div class="form-group"><label>Descrizione</label><textarea name="descrizione" rows="2" required></textarea></div>
+              <div class="form-group"><label>Materiali</label><textarea name="materiali" rows="2" placeholder="Opzionale"></textarea></div>
+              <div class="form-group"><label>Problemi</label><textarea name="problemi" rows="2" placeholder="Opzionale"></textarea></div>
               <button type="submit">Invia Rapportino</button>
             </form>
           </div>
           <div class="card">
-            <h3>📋 Storico Rapportini</h3>
+            <h3>📋 Storico</h3>
             <div class="form-group"><input type="text" id="filter" placeholder="Cerca..."></div>
             <div class="table-wrap"><table><thead><tr><th>Data</th><th>Cantiere</th><th>Ore</th><th class="hide-mobile">Tecnico</th></tr></thead><tbody id="list"></tbody></table></div>
           </div>

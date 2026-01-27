@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cantieri</title>
+  <title>Cantieri - Portal Manager</title>
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
@@ -24,17 +24,20 @@
     <main class="main-content">
       <header class="topbar">
         <button class="menu-toggle" onclick="toggleMenu()">☰</button>
-        <h2>Gestione Cantieri</h2>
+        <div class="topbar-left">
+          <h2>Gestione Cantieri</h2>
+          <p>Commesse e assegnazioni</p>
+        </div>
         <div></div>
       </header>
       <div class="container">
         <div class="grid grid-2">
           <div class="card">
-            <h3>🏗️ Cantieri Attivi</h3>
+            <h3>🏗️ Cantieri</h3>
             <div class="form-group"><input type="text" id="filter" placeholder="Cerca cantiere..."></div>
             <div class="table-wrap"><table><thead><tr><th>Cantiere</th><th>Cliente</th><th>Stato</th><th></th></tr></thead><tbody id="list"></tbody></table></div>
           </div>
-          <div class="card" id="form-card">
+          <div class="card">
             <h3 id="form-title">➕ Nuovo Cantiere</h3>
             <div id="alert" class="alert hidden"></div>
             <form id="form">
@@ -49,7 +52,7 @@
               <div class="form-group"><label>Note</label><textarea name="note" rows="2"></textarea></div>
               <div class="toolbar"><button type="submit">Salva</button><button type="button" class="btn-ghost" onclick="resetForm()">Annulla</button></div>
             </form>
-            <div id="tecnici-section" class="hidden" style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
+            <div id="tecnici-section" class="hidden" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
               <h4 style="font-size:13px;margin-bottom:12px">👷 Tecnici Assegnati</h4>
               <div id="tecnici-list"></div>
               <div class="row row-2" style="margin-top:12px">

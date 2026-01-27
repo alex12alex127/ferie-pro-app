@@ -140,12 +140,20 @@ async function initRequest() {
 async function initDashboard() {
   if (!Auth.requireAuth() || !Auth.requireRole(['manager', 'admin'])) return;
   renderNav('dashboard');
+  
+  // Saluto dinamico
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Buongiorno' : hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
+  const user = Auth.getUser();
+  $('#greeting').textContent = `${greeting}, ${user.name.split(' ')[0]}`;
+  
   const list = $('#requests-list'), ft = $('#filter-text'), fs = $('#filter-status'), ff = $('#filter-from'), fto = $('#filter-to');
   let all = [];
   async function load() {
     const [stats, data] = await Promise.all([API.get('/api/stats'), API.get('/api/requests')]);
-    $('#kpi-total').textContent = stats.total; $('#kpi-pending').textContent = stats.pending;
-    $('#kpi-approved').textContent = stats.approved; $('#kpi-rejected').textContent = stats.rejected;
+    $('#kpi-total').textContent = stats.total;
+    $('#kpi-pending').textContent = stats.pending;
+    $('#kpi-approved').textContent = stats.approved;
     $('#kpi-month').textContent = stats.thisMonth;
     all = data || []; render();
   }

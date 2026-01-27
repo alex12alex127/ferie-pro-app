@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Calendario</title>
+  <title>Calendario - Portal Manager</title>
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
@@ -24,18 +24,20 @@
     <main class="main-content">
       <header class="topbar">
         <button class="menu-toggle" onclick="toggleMenu()">☰</button>
-        <h2>Calendario Ferie</h2>
+        <div class="topbar-left">
+          <h2>Calendario Ferie</h2>
+          <p>Visualizza le ferie approvate</p>
+        </div>
         <div></div>
       </header>
       <div class="container">
         <div class="card">
           <div class="calendar-header">
             <button class="btn-ghost btn-sm" onclick="prevMonth()">← Precedente</button>
-            <h3 id="month-label"></h3>
+            <h3 id="month-label" style="margin:0"></h3>
             <button class="btn-ghost btn-sm" onclick="nextMonth()">Successivo →</button>
           </div>
           <div id="calendar-grid" class="calendar-grid"></div>
-          <div class="calendar-legend"><span class="legend-dot"></span> Ferie approvate</div>
         </div>
       </div>
     </main>

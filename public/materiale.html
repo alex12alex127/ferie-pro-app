@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Richieste Materiale</title>
+  <title>Materiale - Portal Manager</title>
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
@@ -24,7 +24,10 @@
     <main class="main-content">
       <header class="topbar">
         <button class="menu-toggle" onclick="toggleMenu()">☰</button>
-        <h2>Richieste Materiale</h2>
+        <div class="topbar-left">
+          <h2>Richieste Materiale</h2>
+          <p>Ordini e forniture</p>
+        </div>
         <div></div>
       </header>
       <div class="container">
@@ -34,7 +37,7 @@
             <div id="alert" class="alert hidden"></div>
             <form id="form">
               <div class="form-group"><label>Cantiere</label><select name="cantiere_id"><option value="">Nessuno</option></select></div>
-              <div class="form-group"><label>Materiale Richiesto</label><textarea name="materiale" rows="3" required placeholder="Descrivi il materiale..."></textarea></div>
+              <div class="form-group"><label>Materiale</label><textarea name="materiale" rows="3" required placeholder="Descrivi il materiale..."></textarea></div>
               <div class="row row-2">
                 <div class="form-group"><label>Quantità</label><input type="text" name="quantita" placeholder="Es: 10 metri..."></div>
                 <div class="form-group"><label>Urgenza</label><select name="urgenza"><option>Normale</option><option>Alta</option><option>Urgente</option></select></div>
@@ -44,7 +47,7 @@
             </form>
           </div>
           <div class="card">
-            <h3>📋 Elenco Richieste</h3>
+            <h3>📋 Richieste</h3>
             <div class="form-group"><select id="filter-stato"><option value="">Tutti</option><option>In attesa</option><option>Approvata</option><option>Consegnato</option><option>Rifiutata</option></select></div>
             <div class="table-wrap"><table><thead><tr><th>Materiale</th><th class="hide-mobile">Cantiere</th><th>Stato</th><th></th></tr></thead><tbody id="list"></tbody></table></div>
           </div>

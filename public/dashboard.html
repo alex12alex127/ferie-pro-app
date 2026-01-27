@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard</title>
+  <title>Dashboard - Portal Manager</title>
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
@@ -24,19 +24,25 @@
     <main class="main-content">
       <header class="topbar">
         <button class="menu-toggle" onclick="toggleMenu()">☰</button>
-        <h2>Dashboard</h2>
+        <div class="topbar-left">
+          <h2 id="greeting">Buongiorno</h2>
+          <p>Ecco la panoramica delle attività</p>
+        </div>
         <div></div>
       </header>
       <div class="container">
-        <div class="kpi">
-          <div class="kpi-item"><div class="value" id="kpi-total">0</div><div class="label">Totale</div></div>
-          <div class="kpi-item"><div class="value" id="kpi-pending">0</div><div class="label">In Attesa</div></div>
-          <div class="kpi-item"><div class="value" id="kpi-approved">0</div><div class="label">Approvate</div></div>
-          <div class="kpi-item"><div class="value" id="kpi-rejected">0</div><div class="label">Rifiutate</div></div>
-          <div class="kpi-item"><div class="value" id="kpi-month">0</div><div class="label">Questo Mese</div></div>
+        <div class="overview-card" style="margin-bottom:20px">
+          <h3>📊 Panoramica Rapida</h3>
+          <p>Riepilogo richieste ferie</p>
+          <div class="overview-stats">
+            <div class="stat-item"><div class="value" id="kpi-total">0</div><div class="label">Totale</div></div>
+            <div class="stat-item"><div class="value" id="kpi-pending">0</div><div class="label">In Attesa</div></div>
+            <div class="stat-item"><div class="value" id="kpi-approved">0</div><div class="label">Approvate</div></div>
+            <div class="stat-item"><div class="value" id="kpi-month">0</div><div class="label">Questo Mese</div></div>
+          </div>
         </div>
         <div class="card">
-          <h3>📊 Gestione Richieste</h3>
+          <h3>📋 Gestione Richieste</h3>
           <div class="filters">
             <div class="form-group"><label>Cerca</label><input type="text" id="filter-text" placeholder="Nome, email..."></div>
             <div class="form-group"><label>Stato</label><select id="filter-status"><option value="">Tutti</option><option>In attesa</option><option>Approvata</option><option>Rifiutata</option></select></div>
