@@ -33,6 +33,22 @@
       </header>
       
       <div class="container">
+        <!-- Sedi Management -->
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+            <div>
+              <h3 style="margin:0">Gestione Sedi</h3>
+              <p style="margin:4px 0 0;color:var(--text-muted);font-size:13px">Cantieri/sedi di lavoro</p>
+            </div>
+            <form id="sede-form" style="display:flex;gap:8px;align-items:center">
+              <input type="text" name="nome_sede" placeholder="Nuova sede..." required style="padding:8px 12px;font-size:13px">
+              <button type="submit" class="btn-sm">Aggiungi</button>
+            </form>
+          </div>
+          <div id="sede-alert" class="alert hidden" style="margin-top:12px"></div>
+          <div id="sedi-list" style="margin-top:16px"></div>
+        </div>
+        
         <div class="grid grid-2">
           <!-- Requests Management -->
           <div class="card">
@@ -100,6 +116,12 @@
               </div>
               <div class="row row-2">
                 <div class="form-group">
+                  <label>Sede</label>
+                  <select name="sede" id="user-sede">
+                    <option value="">Seleziona...</option>
+                  </select>
+                </div>
+                <div class="form-group">
                   <label>Ruolo</label>
                   <select name="role">
                     <option value="employee">Dipendente</option>
@@ -107,10 +129,10 @@
                     <option value="admin">Admin</option>
                   </select>
                 </div>
-                <div class="form-group">
-                  <label>Giorni Ferie</label>
-                  <input type="number" name="total_days" value="26" min="0">
-                </div>
+              </div>
+              <div class="form-group">
+                <label>Giorni Ferie</label>
+                <input type="number" name="total_days" value="26" min="0">
               </div>
               <button type="submit" class="btn-sm">Crea Utente</button>
             </form>
@@ -121,9 +143,10 @@
                   <tr>
                     <th>Username</th>
                     <th>Dettagli</th>
+                    <th>Sede</th>
                     <th>Ferie</th>
                     <th>Ruolo</th>
-                    <th></th>
+                    <th>Azioni</th>
                   </tr>
                 </thead>
                 <tbody id="users-list"></tbody>

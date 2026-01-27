@@ -117,16 +117,23 @@ function initLogin() {
 }
 
 // REGISTER
-function initRegister() {
+async function initRegister() {
   if (Auth.isLoggedIn()) { Auth.redirectByRole(); return; }
+  
+  // Carica sedi
+  const sedi = await fetch('/api/sedi').then(r => r.json());
+  const sedeSelect = $('#reg-sede');
+  sedeSelect.innerHTML = '<option value="">Seleziona la tua sede...</option>' + sedi.map(s => `<option value="${s.id}">${esc(s.nome)}</option>`).join('');
+  
   $('#register-form').addEventListener('submit', async e => {
     e.preventDefault();
     const alert = $('#register-alert');
     alert.classList.add('hidden');
-    const [u, n, em, p, c] = ['#reg-username', '#reg-name', '#reg-email', '#reg-password', '#reg-confirm'].map(s => $(s).value.trim());
+    const [u, n, em, sede, p, c] = ['#reg-username', '#reg-name', '#reg-email', '#reg-sede', '#reg-password', '#reg-confirm'].map(s => $(s).value.trim());
+    if (!sede) { alert.textContent = 'Seleziona una sede'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); return; }
     if (p !== c) { alert.textContent = 'Le password non coincidono'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); return; }
     try {
-      const res = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, name: n, email: em, password: p }) });
+      const res = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, name: n, email: em, password: p, sede_id: parseInt(sede) }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       Auth.setAuth(data.token, data.user);
@@ -251,6 +258,7 @@ async function initDashboard() {
   const profile = await API.get('/api/profile');
   $('#days-info').innerHTML = `<b>${profile.total_days - profile.used_days}</b> giorni ferie rimanenti su ${profile.total_days}`;
   $('#days-bar').style.width = `${((profile.total_days - profile.used_days) / profile.total_days) * 100}%`;
+  $('#sede-badge').textContent = profile.sede_nome ? `📍 ${profile.sede_nome}` : 'Sede non assegnata';
   
   // Form profilo
   const pf = $('#profile-form'), palert = $('#profile-alert');
@@ -305,7 +313,14 @@ async function initAdmin() {
   if (!Auth.requireAuth() || !Auth.requireRole(['admin'])) return;
   renderNav('admin');
   const list = $('#requests-list'), users = $('#users-list'), ft = $('#filter-text'), fs = $('#filter-status');
-  let all = [];
+  let all = [], allUsers = [], sedi = [];
+  
+  // Load sedi
+  sedi = await API.get('/api/sedi') || [];
+  const sedeOptions = '<option value="">Nessuna</option>' + sedi.map(s => `<option value="${s.id}">${esc(s.nome)}</option>`).join('');
+  $('#user-sede').innerHTML = sedeOptions;
+  $('#sedi-list').innerHTML = sedi.map(s => `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg-glass);border-radius:var(--radius-xs);margin-bottom:6px"><span>${esc(s.nome)}</span><button class="btn-sm btn-ghost" onclick="delSede(${s.id})">×</button></div>`).join('') || '<p style="color:var(--text-muted);font-size:13px">Nessuna sede</p>';
+  
   async function loadReq() { all = await API.get('/api/requests') || []; renderReq(); }
   function renderReq() {
     const q = (ft.value || '').toLowerCase(), st = fs.value;
@@ -313,19 +328,70 @@ async function initAdmin() {
     list.innerHTML = f.length ? f.map(r => `<tr><td><b>${esc(r.nome)}</b></td><td>${esc(r.inizio)} → ${esc(r.fine)}</td><td><span class="badge ${badge(r.stato)}">${esc(r.stato)}</span></td><td><button class="btn-sm btn-secondary" onclick="action(${r.id},'Approvata')">✓</button> <button class="btn-sm btn-ghost" onclick="action(${r.id},'Rifiutata')">✗</button> <button class="btn-sm btn-danger" onclick="delReq(${r.id})">🗑</button></td></tr>`).join('') : '<tr><td colspan="4">Nessuna.</td></tr>';
   }
   async function loadUsers() {
-    const data = await API.get('/api/users') || [];
-    users.innerHTML = data.map(u => `<tr><td><b>${esc(u.username)}</b></td><td>${esc(u.name)}<br><small>${esc(u.email)}</small></td><td>${u.total_days - u.used_days}/${u.total_days}</td><td><span class="badge badge-pending">${esc(u.role)}</span></td><td><button class="btn-sm btn-danger" onclick="delUser(${u.id})">🗑</button></td></tr>`).join('');
+    allUsers = await API.get('/api/users') || [];
+    users.innerHTML = allUsers.map(u => `<tr>
+      <td><b>${esc(u.username)}</b></td>
+      <td>${esc(u.name)}<br><small>${esc(u.email)}</small></td>
+      <td><span class="badge badge-pending" style="font-size:11px">${esc(u.sede_nome || 'N/A')}</span></td>
+      <td>${u.total_days - u.used_days}/${u.total_days}</td>
+      <td><span class="badge badge-pending">${esc(u.role)}</span></td>
+      <td>
+        <select onchange="changeSede(${u.id}, this.value)" style="padding:4px;font-size:11px;border-radius:4px;background:var(--bg-glass);color:var(--text);border:1px solid var(--border)">
+          <option value="">Sposta...</option>
+          ${sedi.filter(s => s.id !== u.sede_id).map(s => `<option value="${s.id}">${esc(s.nome)}</option>`).join('')}
+        </select>
+        <button class="btn-sm btn-danger" onclick="delUser(${u.id})" style="margin-left:4px">🗑</button>
+      </td>
+    </tr>`).join('');
   }
+  
   window.action = async (id, stato) => { await API.patch(`/api/requests/${id}/status`, { stato }); loadReq(); };
   window.delReq = async id => { if (confirm('Eliminare?')) { await API.delete(`/api/requests/${id}`); loadReq(); } };
   window.delUser = async id => { if (confirm('Eliminare utente?')) { await API.delete(`/api/users/${id}`); loadUsers(); } };
+  window.changeSede = async (userId, sedeId) => { 
+    if (!sedeId) return;
+    await API.patch(`/api/users/${userId}`, { sede_id: parseInt(sedeId) }); 
+    loadUsers(); 
+  };
+  window.delSede = async id => { 
+    if (confirm('Eliminare sede? (Solo se vuota)')) { 
+      try { await API.delete(`/api/sedi/${id}`); location.reload(); }
+      catch { alert('Impossibile eliminare: ci sono dipendenti assegnati'); }
+    } 
+  };
+  
+  // Form nuovo utente
   $('#user-form').addEventListener('submit', async e => {
     e.preventDefault();
     const f = e.target, alert = $('#user-alert');
     alert.classList.add('hidden');
-    try { await API.post('/api/users', { username: f.username.value, password: f.password.value, name: f.name.value, email: f.email.value, role: f.role.value, total_days: parseInt(f.total_days?.value) || 26 }); alert.textContent = 'Utente creato!'; alert.className = 'alert alert-success'; alert.classList.remove('hidden'); f.reset(); loadUsers(); }
-    catch { alert.textContent = 'Errore'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
+    try { 
+      await API.post('/api/users', { 
+        username: f.username.value, 
+        password: f.password.value, 
+        name: f.name.value, 
+        email: f.email.value, 
+        role: f.role.value, 
+        total_days: parseInt(f.total_days?.value) || 26,
+        sede_id: f.sede?.value ? parseInt(f.sede.value) : null
+      }); 
+      alert.textContent = 'Utente creato!'; alert.className = 'alert alert-success'; alert.classList.remove('hidden'); 
+      f.reset(); loadUsers(); 
+    } catch { alert.textContent = 'Errore'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
   });
+  
+  // Form nuova sede
+  $('#sede-form')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, alert = $('#sede-alert');
+    alert.classList.add('hidden');
+    try { 
+      await API.post('/api/sedi', { nome: f.nome_sede.value }); 
+      alert.textContent = 'Sede creata!'; alert.className = 'alert alert-success'; alert.classList.remove('hidden'); 
+      f.reset(); location.reload();
+    } catch { alert.textContent = 'Errore o sede già esistente'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
+  });
+  
   [ft, fs].forEach(el => el.addEventListener('input', renderReq));
   $('#btn-refresh').addEventListener('click', loadReq);
   loadReq(); loadUsers();

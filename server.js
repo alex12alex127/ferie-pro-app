@@ -171,7 +171,23 @@ db.exec(`
     attivo INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS sedi (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT UNIQUE NOT NULL,
+    indirizzo TEXT,
+    attiva INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
+
+// Add sede_id column to users if not exists
+try { db.exec('ALTER TABLE users ADD COLUMN sede_id INTEGER DEFAULT NULL'); } catch {}
+
+// Default sedi
+const defaultSedi = ['Ferrara', 'Ravenna'];
+const insertSede = db.prepare('INSERT OR IGNORE INTO sedi (nome) VALUES (?)');
+defaultSedi.forEach(s => insertSede.run(s));
 
 // Default users
 const defaultUsers = [
@@ -204,26 +220,41 @@ const isManager = (req, res, next) => ['admin', 'manager'].includes(req.user.rol
 // AUTH
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
-  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+  const user = db.prepare('SELECT u.*, s.nome as sede_nome FROM users u LEFT JOIN sedi s ON u.sede_id = s.id WHERE u.username = ?').get(username);
   if (!user || !bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: 'Credenziali non valide' });
-  const token = jwt.sign({ id: user.id, username: user.username, name: user.name, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
-  res.json({ token, user: { id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, total_days: user.total_days, used_days: user.used_days } });
+  const token = jwt.sign({ id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, sede_id: user.sede_id }, JWT_SECRET, { expiresIn: '8h' });
+  res.json({ token, user: { id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, total_days: user.total_days, used_days: user.used_days, sede_id: user.sede_id, sede_nome: user.sede_nome } });
 });
 
 app.post('/api/register', (req, res) => {
-  const { username, password, name, email } = req.body;
-  if (!username || !password || !name || !email) return res.status(400).json({ error: 'Campi obbligatori' });
+  const { username, password, name, email, sede_id } = req.body;
+  if (!username || !password || !name || !email || !sede_id) return res.status(400).json({ error: 'Tutti i campi sono obbligatori, inclusa la sede' });
   if (username.length < 3 || password.length < 6) return res.status(400).json({ error: 'Username min 3, password min 6 caratteri' });
   try {
-    const result = db.prepare('INSERT INTO users (username, password, name, email, role) VALUES (?, ?, ?, ?, ?)').run(username, bcrypt.hashSync(password, 10), name, email, 'employee');
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
-    const token = jwt.sign({ id: user.id, username: user.username, name: user.name, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
-    res.json({ token, user: { id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, total_days: user.total_days, used_days: user.used_days } });
+    const result = db.prepare('INSERT INTO users (username, password, name, email, role, sede_id) VALUES (?, ?, ?, ?, ?, ?)').run(username, bcrypt.hashSync(password, 10), name, email, 'employee', sede_id);
+    const user = db.prepare('SELECT u.*, s.nome as sede_nome FROM users u LEFT JOIN sedi s ON u.sede_id = s.id WHERE u.id = ?').get(result.lastInsertRowid);
+    const token = jwt.sign({ id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, sede_id: user.sede_id }, JWT_SECRET, { expiresIn: '8h' });
+    res.json({ token, user: { id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, total_days: user.total_days, used_days: user.used_days, sede_id: user.sede_id, sede_nome: user.sede_nome } });
   } catch { res.status(400).json({ error: 'Username o email già in uso' }); }
 });
 
+// SEDI
+app.get('/api/sedi', (req, res) => res.json(db.prepare('SELECT * FROM sedi WHERE attiva = 1 ORDER BY nome').all()));
+app.post('/api/sedi', auth, isAdmin, (req, res) => {
+  const { nome, indirizzo } = req.body;
+  if (!nome) return res.status(400).json({ error: 'Nome obbligatorio' });
+  try { db.prepare('INSERT INTO sedi (nome, indirizzo) VALUES (?,?)').run(nome, indirizzo || ''); res.json({ message: 'OK' }); }
+  catch { res.status(400).json({ error: 'Sede già esistente' }); }
+});
+app.delete('/api/sedi/:id', auth, isAdmin, (req, res) => {
+  const users = db.prepare('SELECT COUNT(*) as c FROM users WHERE sede_id = ?').get(req.params.id);
+  if (users.c > 0) return res.status(400).json({ error: 'Impossibile eliminare: ci sono dipendenti assegnati' });
+  db.prepare('UPDATE sedi SET attiva = 0 WHERE id = ?').run(req.params.id);
+  res.json({ message: 'OK' });
+});
+
 // PROFILE
-app.get('/api/profile', auth, (req, res) => res.json(db.prepare('SELECT id, username, name, email, role, phone, department, total_days, used_days FROM users WHERE id = ?').get(req.user.id)));
+app.get('/api/profile', auth, (req, res) => res.json(db.prepare('SELECT u.id, u.username, u.name, u.email, u.role, u.phone, u.department, u.total_days, u.used_days, u.sede_id, s.nome as sede_nome FROM users u LEFT JOIN sedi s ON u.sede_id = s.id WHERE u.id = ?').get(req.user.id)));
 app.patch('/api/profile', auth, (req, res) => {
   const { name, phone, department } = req.body;
   db.prepare('UPDATE users SET name=COALESCE(?,name), phone=COALESCE(?,phone), department=COALESCE(?,department) WHERE id=?').run(name, phone, department, req.user.id);
@@ -276,19 +307,28 @@ app.get('/api/stats', auth, isManager, (req, res) => {
 });
 
 // USERS
-app.get('/api/users', auth, isAdmin, (req, res) => res.json(db.prepare('SELECT id, username, name, email, role, phone, department, total_days, used_days FROM users').all()));
+app.get('/api/users', auth, (req, res) => {
+  // Admin/Manager vedono tutti, employee vede solo quelli della sua sede
+  if (['admin', 'manager'].includes(req.user.role)) {
+    res.json(db.prepare('SELECT u.id, u.username, u.name, u.email, u.role, u.phone, u.department, u.total_days, u.used_days, u.sede_id, s.nome as sede_nome FROM users u LEFT JOIN sedi s ON u.sede_id = s.id ORDER BY s.nome, u.name').all());
+  } else {
+    res.json(db.prepare('SELECT u.id, u.username, u.name, u.email, u.role, u.phone, u.department, u.total_days, u.used_days, u.sede_id, s.nome as sede_nome FROM users u LEFT JOIN sedi s ON u.sede_id = s.id WHERE u.sede_id = ? ORDER BY u.name').all(req.user.sede_id));
+  }
+});
 app.post('/api/users', auth, isAdmin, (req, res) => {
-  const { username, password, name, email, role, total_days } = req.body;
+  const { username, password, name, email, role, total_days, sede_id } = req.body;
   if (!username || !password || !name || !email) return res.status(400).json({ error: 'Campi obbligatori' });
   try {
-    db.prepare('INSERT INTO users (username, password, name, email, role, total_days) VALUES (?,?,?,?,?,?)').run(username, bcrypt.hashSync(password, 10), name, email, role || 'employee', total_days || 26);
+    db.prepare('INSERT INTO users (username, password, name, email, role, total_days, sede_id) VALUES (?,?,?,?,?,?,?)').run(username, bcrypt.hashSync(password, 10), name, email, role || 'employee', total_days || 26, sede_id || null);
     res.json({ message: 'OK' });
   } catch { res.status(400).json({ error: 'Già esistente' }); }
 });
-app.patch('/api/users/:id', auth, isAdmin, (req, res) => {
-  const { name, email, role, total_days, used_days, resetPassword } = req.body;
+app.patch('/api/users/:id', auth, isManager, (req, res) => {
+  const { name, email, role, total_days, used_days, sede_id, resetPassword } = req.body;
+  // Solo admin può cambiare ruolo
+  if (role && req.user.role !== 'admin') return res.status(403).json({ error: 'Solo admin può cambiare ruolo' });
   if (resetPassword) db.prepare('UPDATE users SET password = ? WHERE id = ?').run(bcrypt.hashSync(resetPassword, 10), req.params.id);
-  db.prepare('UPDATE users SET name=COALESCE(?,name), email=COALESCE(?,email), role=COALESCE(?,role), total_days=COALESCE(?,total_days), used_days=COALESCE(?,used_days) WHERE id=?').run(name, email, role, total_days, used_days, req.params.id);
+  db.prepare('UPDATE users SET name=COALESCE(?,name), email=COALESCE(?,email), role=COALESCE(?,role), total_days=COALESCE(?,total_days), used_days=COALESCE(?,used_days), sede_id=COALESCE(?,sede_id) WHERE id=?').run(name, email, role, total_days, used_days, sede_id, req.params.id);
   res.json({ message: 'OK' });
 });
 app.delete('/api/users/:id', auth, isAdmin, (req, res) => {
@@ -471,7 +511,12 @@ app.get('/api/calendar', auth, (req, res) => {
   const { month, year } = req.query;
   const start = `${year}-${String(month).padStart(2, '0')}-01`;
   const end = `${year}-${String(month).padStart(2, '0')}-31`;
-  res.json(db.prepare(`SELECT id, nome, inizio, fine, tipo FROM requests WHERE stato = 'Approvata' AND ((inizio BETWEEN ? AND ?) OR (fine BETWEEN ? AND ?))`).all(start, end, start, end));
+  // Manager/Admin vedono tutte le ferie, dipendenti solo quelle della loro sede
+  if (['admin', 'manager'].includes(req.user.role)) {
+    res.json(db.prepare(`SELECT r.id, r.nome, r.inizio, r.fine, r.tipo FROM requests r WHERE r.stato = 'Approvata' AND ((r.inizio BETWEEN ? AND ?) OR (r.fine BETWEEN ? AND ?))`).all(start, end, start, end));
+  } else {
+    res.json(db.prepare(`SELECT r.id, r.nome, r.inizio, r.fine, r.tipo FROM requests r JOIN users u ON r.user_id = u.id WHERE r.stato = 'Approvata' AND u.sede_id = ? AND ((r.inizio BETWEEN ? AND ?) OR (r.fine BETWEEN ? AND ?))`).all(req.user.sede_id, start, end, start, end));
+  }
 });
 
 // EXPORT
