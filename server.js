@@ -690,7 +690,7 @@ app.delete('/api/dpi/catalogo/:id', auth, isManager, (req, res) => {
 app.get('/api/dpi/assegnazioni', auth, (req, res) => {
   const { user_id } = req.query;
   let query = `
-    SELECT a.*, d.nome as dpi_nome, d.categoria, u.nome as dipendente_nome, u.cognome as dipendente_cognome
+    SELECT a.*, d.nome as dpi_nome, d.categoria, u.name as dipendente_nome
     FROM dpi_assegnazioni a
     JOIN dpi_catalogo d ON a.dpi_id = d.id
     JOIN users u ON a.user_id = u.id

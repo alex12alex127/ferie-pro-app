@@ -878,8 +878,8 @@ async function initDPI() {
     
     if (isManager) {
       users.forEach(u => {
-        filterUser.innerHTML += `<option value="${u.id}">${u.nome} ${u.cognome}</option>`;
-        if (selectUser) selectUser.innerHTML += `<option value="${u.id}">${u.nome} ${u.cognome}</option>`;
+        filterUser.innerHTML += `<option value="${u.id}">${u.name}</option>`;
+        if (selectUser) selectUser.innerHTML += `<option value="${u.id}">${u.name}</option>`;
       });
     }
     
@@ -933,7 +933,7 @@ async function initDPI() {
     // Group by user
     const byUser = {};
     filtered.forEach(a => {
-      const key = `${a.dipendente_nome} ${a.dipendente_cognome}`;
+      const key = a.dipendente_nome;
       if (!byUser[key]) byUser[key] = [];
       byUser[key].push(a);
     });
