@@ -425,6 +425,78 @@ async function initAdmin() {
   [ft, fs].forEach(el => el.addEventListener('input', renderReq));
   $('#btn-refresh').addEventListener('click', loadReq);
   loadReq(); loadUsers();
+  
+  // Backup functions
+  const lastBackup = localStorage.getItem('lastBackup');
+  if (lastBackup) $('#last-backup').textContent = new Date(lastBackup).toLocaleString('it-IT');
+  
+  window.downloadBackup = async () => {
+    const alert = $('#backup-alert');
+    alert.classList.add('hidden');
+    try {
+      const res = await fetch('/api/backup', { headers: Auth.authHeaders() });
+      if (!res.ok) throw new Error('Errore download');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `portal-backup-${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      localStorage.setItem('lastBackup', new Date().toISOString());
+      $('#last-backup').textContent = new Date().toLocaleString('it-IT');
+      alert.textContent = 'Backup scaricato con successo!';
+      alert.className = 'alert alert-success';
+      alert.classList.remove('hidden');
+    } catch (err) {
+      alert.textContent = 'Errore durante il backup';
+      alert.className = 'alert alert-error';
+      alert.classList.remove('hidden');
+    }
+  };
+  
+  window.uploadBackup = async (input) => {
+    const file = input.files[0];
+    if (!file) return;
+    
+    const alert = $('#backup-alert');
+    alert.classList.add('hidden');
+    
+    if (!confirm('⚠️ ATTENZIONE!\n\nIl ripristino sovrascriverà TUTTI i dati esistenti (eccetto il tuo account admin).\n\nSei sicuro di voler procedere?')) {
+      input.value = '';
+      return;
+    }
+    
+    try {
+      const text = await file.text();
+      const backup = JSON.parse(text);
+      
+      if (!backup.version || !backup.data) {
+        throw new Error('File di backup non valido');
+      }
+      
+      const res = await fetch('/api/restore', {
+        method: 'POST',
+        headers: { ...Auth.authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(backup)
+      });
+      
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error);
+      
+      alert.textContent = 'Ripristino completato! La pagina si ricaricherà...';
+      alert.className = 'alert alert-success';
+      alert.classList.remove('hidden');
+      
+      setTimeout(() => location.reload(), 2000);
+    } catch (err) {
+      alert.textContent = 'Errore: ' + err.message;
+      alert.className = 'alert alert-error';
+      alert.classList.remove('hidden');
+    }
+    
+    input.value = '';
+  };
 }
 
 // CALENDAR

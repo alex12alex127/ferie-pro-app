@@ -545,6 +545,101 @@ app.get('/api/export', auth, isManager, (req, res) => {
   } else res.json(data);
 });
 
+// BACKUP & RESTORE
+app.get('/api/backup', auth, isAdmin, (req, res) => {
+  try {
+    const backup = {
+      version: '1.0',
+      created_at: new Date().toISOString(),
+      data: {
+        users: db.prepare('SELECT * FROM users').all(),
+        requests: db.prepare('SELECT * FROM requests').all(),
+        sedi: db.prepare('SELECT * FROM sedi').all(),
+        avvisi: db.prepare('SELECT * FROM avvisi').all(),
+        cantieri: db.prepare('SELECT * FROM cantieri').all(),
+        cantieri_assegnazioni: db.prepare('SELECT * FROM cantieri_assegnazioni').all(),
+        notifications: db.prepare('SELECT * FROM notifications').all()
+      }
+    };
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename=portal-backup-${new Date().toISOString().slice(0,10)}.json`);
+    res.json(backup);
+  } catch (err) {
+    res.status(500).json({ error: 'Errore durante il backup: ' + err.message });
+  }
+});
+
+app.post('/api/restore', auth, isAdmin, (req, res) => {
+  const { data, version } = req.body;
+  if (!data || !version) return res.status(400).json({ error: 'File di backup non valido' });
+  
+  try {
+    // Usa una transazione per sicurezza
+    const transaction = db.transaction(() => {
+      // Pulisci tabelle esistenti (eccetto admin corrente)
+      const currentUserId = req.user.id;
+      
+      // Ripristina sedi
+      if (data.sedi) {
+        db.prepare('DELETE FROM sedi').run();
+        const insertSede = db.prepare('INSERT INTO sedi (id, nome, indirizzo, attiva, created_at) VALUES (?, ?, ?, ?, ?)');
+        data.sedi.forEach(s => insertSede.run(s.id, s.nome, s.indirizzo, s.attiva, s.created_at));
+      }
+      
+      // Ripristina utenti (mantiene l'admin corrente)
+      if (data.users) {
+        db.prepare('DELETE FROM users WHERE id != ?').run(currentUserId);
+        const insertUser = db.prepare('INSERT OR REPLACE INTO users (id, username, password, name, email, role, phone, department, total_days, used_days, sede_id, avatar, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        data.users.forEach(u => {
+          if (u.id !== currentUserId) {
+            insertUser.run(u.id, u.username, u.password, u.name, u.email, u.role, u.phone, u.department, u.total_days, u.used_days, u.sede_id, u.avatar, u.created_at);
+          }
+        });
+      }
+      
+      // Ripristina richieste
+      if (data.requests) {
+        db.prepare('DELETE FROM requests').run();
+        const insertReq = db.prepare('INSERT INTO requests (id, user_id, nome, email, reparto, responsabile, inizio, fine, giorni, tipo, urgenza, motivo, stato, approved_by, approved_at, codice_malattia, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        data.requests.forEach(r => insertReq.run(r.id, r.user_id, r.nome, r.email, r.reparto, r.responsabile, r.inizio, r.fine, r.giorni, r.tipo, r.urgenza, r.motivo, r.stato, r.approved_by, r.approved_at, r.codice_malattia, r.created_at));
+      }
+      
+      // Ripristina avvisi
+      if (data.avvisi) {
+        db.prepare('DELETE FROM avvisi').run();
+        const insertAvviso = db.prepare('INSERT INTO avvisi (id, titolo, messaggio, priorita, attivo, created_at) VALUES (?, ?, ?, ?, ?, ?)');
+        data.avvisi.forEach(a => insertAvviso.run(a.id, a.titolo, a.messaggio, a.priorita, a.attivo, a.created_at));
+      }
+      
+      // Ripristina cantieri
+      if (data.cantieri) {
+        db.prepare('DELETE FROM cantieri').run();
+        const insertCantiere = db.prepare('INSERT INTO cantieri (id, nome, cliente, indirizzo, stato, data_inizio, data_fine, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        data.cantieri.forEach(c => insertCantiere.run(c.id, c.nome, c.cliente, c.indirizzo, c.stato, c.data_inizio, c.data_fine, c.note, c.created_at));
+      }
+      
+      // Ripristina assegnazioni cantieri
+      if (data.cantieri_assegnazioni) {
+        db.prepare('DELETE FROM cantieri_assegnazioni').run();
+        const insertAss = db.prepare('INSERT INTO cantieri_assegnazioni (id, cantiere_id, user_id, ruolo) VALUES (?, ?, ?, ?)');
+        data.cantieri_assegnazioni.forEach(a => insertAss.run(a.id, a.cantiere_id, a.user_id, a.ruolo));
+      }
+      
+      // Ripristina notifiche
+      if (data.notifications) {
+        db.prepare('DELETE FROM notifications').run();
+        const insertNotif = db.prepare('INSERT INTO notifications (id, user_id, message, read, created_at) VALUES (?, ?, ?, ?, ?)');
+        data.notifications.forEach(n => insertNotif.run(n.id, n.user_id, n.message, n.read, n.created_at));
+      }
+    });
+    
+    transaction();
+    res.json({ message: 'Ripristino completato con successo!' });
+  } catch (err) {
+    res.status(500).json({ error: 'Errore durante il ripristino: ' + err.message });
+  }
+});
+
 // HTML Routes
 const pages = ['/', '/index.html', '/register.html', '/request.html', '/dashboard.html', '/admin.html', '/calendar.html', '/cantieri.html', '/settings.html'];
 pages.forEach(p => app.get(p, (req, res) => res.sendFile(path.join(__dirname, 'public', p === '/' ? 'index.html' : p))));
