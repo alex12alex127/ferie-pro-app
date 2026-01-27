@@ -1099,11 +1099,11 @@ td small {
   }
   
   .container {
-    padding: 20px;
+    padding: 16px;
   }
   
   .card {
-    padding: 20px;
+    padding: 16px;
   }
   
   .kpi {
@@ -1120,7 +1120,7 @@ td small {
   }
   
   .overview-card {
-    padding: 24px;
+    padding: 20px;
   }
   
   .overview-stats {
@@ -1149,18 +1149,39 @@ td small {
     flex-direction: column;
   }
   
+  /* Fix date picker overflow on mobile */
   input, select, textarea {
     font-size: 16px;
-    padding: 14px;
+    padding: 12px;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="time"] {
+    min-height: 48px;
+    -webkit-appearance: none;
+    appearance: none;
   }
   
   .filters {
     grid-template-columns: 1fr;
-    padding: 16px;
+    padding: 12px;
+    gap: 12px;
+  }
+  
+  .filters .form-group {
+    width: 100%;
+  }
+  
+  .row, .row-2, .row-3 {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
   
   th, td {
-    padding: 14px 16px;
+    padding: 12px;
     font-size: 13px;
   }
   
@@ -1183,17 +1204,27 @@ td small {
   }
   
   .login-card {
-    padding: 28px;
+    padding: 24px;
+    margin: 16px;
   }
   
   .login-card h1 {
-    font-size: 26px;
+    font-size: 24px;
+  }
+  
+  .grid, .grid-2, .grid-3, .grid-4 {
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
 }
 
 @media (max-width: 480px) {
   .container {
-    padding: 16px;
+    padding: 12px;
+  }
+  
+  .card {
+    padding: 14px;
   }
   
   .kpi {
@@ -1208,14 +1239,58 @@ td small {
     font-size: 24px;
   }
   
+  .days-counter {
+    padding: 20px;
+  }
+  
   .days-counter b {
-    font-size: 42px;
+    font-size: 36px;
   }
   
   .calendar-header {
     flex-direction: column;
     gap: 12px;
     text-align: center;
+  }
+  
+  /* Extra small screen date picker fix */
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="time"] {
+    font-size: 14px;
+    padding: 10px;
+  }
+  
+  .topbar {
+    padding: 0 12px;
+  }
+  
+  .topbar-left h2 {
+    font-size: 16px;
+  }
+  
+  .topbar-left p {
+    font-size: 11px;
+  }
+  
+  .sidebar-header {
+    padding: 20px 16px;
+  }
+  
+  .sidebar-header h1 {
+    font-size: 18px;
+  }
+  
+  th, td {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+  
+  .table-wrap {
+    margin: 0 -14px;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
   }
 }
 
