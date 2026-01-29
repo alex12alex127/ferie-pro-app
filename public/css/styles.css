@@ -717,6 +717,7 @@ button::before {
   background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
   opacity: 0;
   transition: var(--transition);
+  z-index: 0;
 }
 
 button:hover::before {
@@ -725,7 +726,7 @@ button:hover::before {
 
 button span, button:not(:empty) {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 button:hover {
