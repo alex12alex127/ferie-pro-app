@@ -19,82 +19,106 @@ const fmtDate = d => d ? new Date(d).toLocaleDateString('it-IT') : '-';
 const isExpiring = d => { if (!d) return false; const diff = (new Date(d) - new Date()) / (1000 * 60 * 60 * 24); return diff < 30 && diff > 0; };
 const isExpired = d => d && new Date(d) < new Date();
 
-// Funzione per creare il grafico a torta delle ferie
+// Gap tra le fette (effetto "fetta di torta") in radianti
+const PIE_GAP = 0.02;
+
+function drawDonutSlice(ctx, cx, cy, rOuter, rInner, start, end, color, stroke) {
+  ctx.beginPath();
+  ctx.arc(cx, cy, rOuter, start, end);
+  ctx.arc(cx, cy, rInner, end, start, true);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+  if (stroke) {
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+}
+
+// Grafico a torta ferie (donut, fette distinte)
 function createFeriePieChart(totalDays, usedDays) {
   const canvas = $('#ferie-pie-chart');
+  const centerEl = $('#pie-center-num');
   if (!canvas) return;
-  
+  const remainingDays = Math.max(0, totalDays - usedDays);
+  if (centerEl) centerEl.textContent = remainingDays;
+  $('#remaining-days').textContent = remainingDays;
+  $('#used-days').textContent = usedDays;
+  $('#total-days').textContent = totalDays;
+
   const ctx = canvas.getContext('2d');
-  const remainingDays = totalDays - usedDays;
-  
-  // Calcola le percentuali
-  const usedPercent = (usedDays / totalDays) * 100;
-  const remainingPercent = (remainingDays / totalDays) * 100;
-  
-  // Dimensioni del canvas
-  const width = canvas.width;
-  const height = canvas.height;
-  const centerX = width / 2;
-  const centerY = height / 2;
-  const radius = Math.min(width, height) / 2 - 10;
-  
-  // Pulisci il canvas
-  ctx.clearRect(0, 0, width, height);
-  
-  // Colori
-  const remainingColor = '#10b981'; // Verde
-  const usedColor = '#ef4444'; // Rosso
-  const totalColor = '#6b7280'; // Grigio
-  
-  // Disegna il cerchio di sfondo (totale)
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-  ctx.fillStyle = totalColor + '20'; // Colore con trasparenza
-  ctx.fill();
-  
-  // Disegna la torta
-  let startAngle = -Math.PI / 2; // Inizia da -90° (in alto)
-  
-  // Se ci sono giorni utilizzati, disegna la sezione
-  if (usedDays > 0) {
-    const usedAngle = (usedPercent / 100) * Math.PI * 2;
-    ctx.beginPath();
-    ctx.moveTo(centerX, centerY);
-    ctx.arc(centerX, centerY, radius, startAngle, startAngle + usedAngle);
-    ctx.closePath();
-    ctx.fillStyle = usedColor;
-    ctx.fill();
-    startAngle += usedAngle;
+  const w = canvas.width;
+  const h = canvas.height;
+  const cx = w / 2;
+  const cy = h / 2;
+  const r = Math.min(w, h) / 2 - 12;
+  const rInner = r * 0.55;
+  ctx.clearRect(0, 0, w, h);
+
+  if (totalDays === 0) {
+    drawDonutSlice(ctx, cx, cy, r, rInner, 0, Math.PI * 2, '#e2e8f0', null);
+    return;
   }
-  
-  // Disegna i giorni rimanenti
-  if (remainingDays > 0) {
-    const remainingAngle = (remainingPercent / 100) * Math.PI * 2;
-    ctx.beginPath();
-    ctx.moveTo(centerX, centerY);
-    ctx.arc(centerX, centerY, radius, startAngle, startAngle + remainingAngle);
-    ctx.closePath();
-    ctx.fillStyle = remainingColor;
-    ctx.fill();
+  const usedPct = usedDays / totalDays;
+  const remPct = remainingDays / totalDays;
+  const n = (usedDays > 0 ? 1 : 0) + (remainingDays > 0 ? 1 : 0) || 1;
+  let start = -Math.PI / 2;
+  const full = Math.PI * 2 - n * PIE_GAP;
+
+  if (usedDays > 0 && usedPct > 0.001) {
+    const sweep = full * usedPct;
+    drawDonutSlice(ctx, cx, cy, r, rInner, start, start + sweep, '#ef4444', 'rgba(255,255,255,0.5)');
+    start += sweep + PIE_GAP;
   }
-  
-  // Disegna il bordo
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-  ctx.strokeStyle = totalColor + '40';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  
-  // Aggiungi testo al centro
-  ctx.fillStyle = 'var(--text)';
-  ctx.font = 'bold 16px Inter, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(`${remainingDays}`, centerX, centerY - 8);
-  
-  ctx.fillStyle = 'var(--text-muted)';
-  ctx.font = '10px Inter, sans-serif';
-  ctx.fillText('giorni', centerX, centerY + 10);
+  if (remainingDays > 0 && remPct > 0.001) {
+    const sweep = full * remPct;
+    drawDonutSlice(ctx, cx, cy, r, rInner, start, start + sweep, '#10b981', 'rgba(255,255,255,0.5)');
+  }
+}
+
+// Grafico a torta richieste (manager): In attesa, Approvate, Rifiutate
+function createRequestsPieChart(stats) {
+  const canvas = $('#requests-pie-chart');
+  const totalEl = $('#requests-pie-total');
+  if (!canvas) return;
+  const total = stats.total || 0;
+  const pending = stats.pending || 0;
+  const approved = stats.approved || 0;
+  const rejected = stats.rejected || 0;
+  if (totalEl) totalEl.textContent = total;
+  $('#kpi-pending').textContent = pending;
+  $('#kpi-approved').textContent = approved;
+  $('#kpi-rejected').textContent = rejected;
+  $('#kpi-month').textContent = stats.thisMonth ?? 0;
+
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  const cx = w / 2;
+  const cy = h / 2;
+  const r = Math.min(w, h) / 2 - 10;
+  const rInner = r * 0.5;
+  ctx.clearRect(0, 0, w, h);
+
+  const items = [
+    { v: pending, c: '#f59e0b' },
+    { v: approved, c: '#10b981' },
+    { v: rejected, c: '#ef4444' }
+  ].filter(x => x.v > 0);
+  if (items.length === 0) {
+    drawDonutSlice(ctx, cx, cy, r, rInner, 0, Math.PI * 2, '#e2e8f0', null);
+    return;
+  }
+  let start = -Math.PI / 2;
+  const n = items.length;
+  const full = Math.PI * 2 - n * PIE_GAP;
+  items.forEach((x) => {
+    const pct = x.v / total;
+    const sweep = full * pct;
+    drawDonutSlice(ctx, cx, cy, r, rInner, start, start + sweep, x.c, 'rgba(255,255,255,0.5)');
+    start += sweep + PIE_GAP;
+  });
 }
 
 // SVG Icons (Lucide-style)
@@ -382,17 +406,15 @@ async function initDashboard() {
   
   // Carica profilo e giorni ferie
   const profile = await API.get('/api/profile');
-  $('#days-info').innerHTML = `<b>${profile.total_days - profile.used_days}</b> giorni rimanenti su ${profile.total_days}`;
-  $('#sede-badge').textContent = profile.sede_nome ? `📍 ${profile.sede_nome}` : 'Sede non assegnata';
-  $('#profile-name').textContent = profile.name;
+  const rem = Math.max(0, (profile.total_days || 0) - (profile.used_days || 0));
+  const el = $('#days-info');
+  if (el) el.innerHTML = `<b>${rem}</b> giorni rimanenti su ${profile.total_days || 0}`;
+  const sb = $('#sede-badge');
+  if (sb) sb.textContent = profile.sede_nome ? `📍 ${profile.sede_nome}` : 'Sede non assegnata';
+  const pn = $('#profile-name');
+  if (pn) pn.textContent = profile.name;
   
-  // Aggiorna i valori della legenda del grafico a torta
-  $('#remaining-days').textContent = profile.total_days - profile.used_days;
-  $('#used-days').textContent = profile.used_days;
-  $('#total-days').textContent = profile.total_days;
-  
-  // Crea il grafico a torta
-  createFeriePieChart(profile.total_days, profile.used_days);
+  createFeriePieChart(profile.total_days || 0, profile.used_days || 0);
   
   // Avatar
   const initials = profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -428,10 +450,7 @@ async function initDashboard() {
     let all = [];
     async function load() {
       const [stats, data] = await Promise.all([API.get('/api/stats'), API.get('/api/requests')]);
-      $('#kpi-total').textContent = stats.total;
-      $('#kpi-pending').textContent = stats.pending;
-      $('#kpi-approved').textContent = stats.approved;
-      $('#kpi-month').textContent = stats.thisMonth;
+      createRequestsPieChart(stats || {});
       all = data || []; render();
     }
     function render() {

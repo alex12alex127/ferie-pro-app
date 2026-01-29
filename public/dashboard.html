@@ -39,103 +39,100 @@
         <div></div>
       </header>
       
-      <div class="container">
-        <!-- Avvisi Section -->
-        <div id="avvisi-section" class="hidden" style="margin-bottom:16px">
-          <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-              <h3 style="margin:0">Avvisi Recenti</h3>
+      <div class="container dashboard-modern">
+        <!-- Avvisi -->
+        <div id="avvisi-section" class="hidden dashboard-avvisi">
+          <div class="card card-avvisi">
+            <div class="card-header-row">
+              <h3>Avvisi recenti</h3>
               <button class="btn-ghost btn-sm" id="btn-toggle-avvisi">Nascondi</button>
             </div>
             <div id="avvisi-list"></div>
           </div>
         </div>
-        
-        <!-- Profile Card con Foto e Meteo -->
-        <div class="grid grid-2" style="margin-bottom:16px">
-          <!-- Profilo Utente -->
-          <div class="card" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
-            <div class="profile-avatar" id="profile-avatar" onclick="changeAvatar()" style="cursor:pointer" title="Clicca per cambiare foto">
+
+        <!-- Hero: Welcome + Meteo -->
+        <div class="dashboard-hero">
+          <div class="dashboard-hero-left">
+            <div class="profile-avatar" id="profile-avatar" onclick="changeAvatar()" title="Clicca per cambiare foto">
               <span id="avatar-initials"></span>
               <img id="avatar-img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%">
             </div>
-            <div class="profile-info" style="flex:1">
-              <h3 style="margin:0 0 4px" id="profile-name"></h3>
-              <span id="sede-badge" class="badge badge-pending" style="font-size:11px"></span>
-              <div id="days-info" style="margin-top:8px;font-size:13px"></div>
-              
-              <!-- Grafico a torta per le ferie -->
-              <div class="pie-chart-container" style="margin-top:12px">
-                <div class="pie-chart-wrapper">
-                  <canvas id="ferie-pie-chart" width="120" height="120" style="max-width:120px;max-height:120px"></canvas>
-                </div>
-                <div class="pie-chart-legend">
-                  <div class="legend-item">
-                    <span class="legend-color" style="background-color:#10b981"></span>
-                    <span class="legend-text">Giorni rimanenti: <strong id="remaining-days">0</strong></span>
-                  </div>
-                  <div class="legend-item">
-                    <span class="legend-color" style="background-color:#ef4444"></span>
-                    <span class="legend-text">Giorni utilizzati: <strong id="used-days">0</strong></span>
-                  </div>
-                  <div class="legend-item">
-                    <span class="legend-color" style="background-color:#6b7280"></span>
-                    <span class="legend-text">Totale giorni: <strong id="total-days">0</strong></span>
-                  </div>
-                </div>
-              </div>
+            <div class="dashboard-hero-info">
+              <h1 id="profile-name" class="dashboard-hero-name"></h1>
+              <span id="sede-badge" class="badge badge-pending sede-badge"></span>
+              <p id="days-info" class="dashboard-days-text"></p>
             </div>
           </div>
-          
-          <!-- Widget Meteo -->
-          <div class="card" id="weather-card">
-            <div style="display:flex;align-items:center;gap:12px">
-              <div id="weather-icon" style="font-size:40px">⛅</div>
-              <div>
-                <div style="font-size:24px;font-weight:600" id="weather-temp">--°C</div>
-                <div style="color:var(--text-secondary);font-size:13px" id="weather-desc">Caricamento...</div>
-                <div style="color:var(--text-muted);font-size:12px" id="weather-city"></div>
-              </div>
+          <div class="dashboard-hero-weather card" id="weather-card">
+            <div id="weather-icon" class="weather-icon">⛅</div>
+            <div class="weather-details">
+              <span id="weather-temp" class="weather-temp">--°C</span>
+              <span id="weather-desc" class="weather-desc">Caricamento...</span>
+              <span id="weather-city" class="weather-city"></span>
             </div>
           </div>
         </div>
-        
-        <!-- Stats Manager/Admin -->
-        <div id="manager-section" class="hidden">
-          <div class="overview-card" style="margin-bottom:16px">
-            <h3>Panoramica Team</h3>
-            <p>Riepilogo richieste ferie</p>
-            <div class="overview-stats">
-              <div class="stat-item">
-                <div class="value" id="kpi-total">0</div>
-                <div class="label">Totale</div>
+
+        <!-- Ferie: grafico a torta (fette) -->
+        <section class="dashboard-section dashboard-ferie">
+          <div class="card card-pie">
+            <h3 class="section-title">Le tue ferie</h3>
+            <div class="pie-chart-modern">
+              <div class="pie-chart-main">
+                <canvas id="ferie-pie-chart" width="200" height="200"></canvas>
+                <div class="pie-center-label">
+                  <span id="pie-center-num">0</span>
+                  <span class="pie-center-unit">giorni</span>
+                </div>
               </div>
-              <div class="stat-item">
-                <div class="value" id="kpi-pending">0</div>
-                <div class="label">In Attesa</div>
-              </div>
-              <div class="stat-item">
-                <div class="value" id="kpi-approved">0</div>
-                <div class="label">Approvate</div>
-              </div>
-              <div class="stat-item">
-                <div class="value" id="kpi-month">0</div>
-                <div class="label">Mese</div>
+              <div class="pie-legend">
+                <div class="pie-legend-item pie-remaining">
+                  <span class="pie-dot"></span>
+                  <span>Rimanenti: <strong id="remaining-days">0</strong></span>
+                </div>
+                <div class="pie-legend-item pie-used">
+                  <span class="pie-dot"></span>
+                  <span>Usati: <strong id="used-days">0</strong></span>
+                </div>
+                <div class="pie-legend-item pie-total">
+                  <span class="pie-dot"></span>
+                  <span>Totale: <strong id="total-days">0</strong></span>
+                </div>
               </div>
             </div>
           </div>
-          
-          <!-- Requests Table -->
-          <div class="card" style="margin-bottom:16px">
-            <h3>Gestione Richieste</h3>
-            
-            <div class="filters">
-              <div class="form-group">
-                <label>Cerca</label>
-                <input type="text" id="filter-text" placeholder="Nome, email...">
+        </section>
+
+        <!-- Manager: Panoramica a torta + KPIs -->
+        <div id="manager-section" class="hidden">
+          <section class="dashboard-section dashboard-team">
+            <div class="card card-pie card-pie-team">
+              <h3 class="section-title">Panoramica richieste</h3>
+              <p class="section-sub">Riepilogo ferie del team</p>
+              <div class="pie-chart-modern pie-team">
+                <div class="pie-chart-main">
+                  <canvas id="requests-pie-chart" width="180" height="180"></canvas>
+                  <div class="pie-center-label pie-center-small">
+                    <span id="requests-pie-total">0</span>
+                    <span class="pie-center-unit">totali</span>
+                  </div>
+                </div>
+                <div class="pie-legend pie-legend-team">
+                  <div class="pie-legend-item pie-pending"><span class="pie-dot"></span><span>In attesa: <strong id="kpi-pending">0</strong></span></div>
+                  <div class="pie-legend-item pie-approved"><span class="pie-dot"></span><span>Approvate: <strong id="kpi-approved">0</strong></span></div>
+                  <div class="pie-legend-item pie-rejected"><span class="pie-dot"></span><span>Rifiutate: <strong id="kpi-rejected">0</strong></span></div>
+                  <div class="pie-legend-item pie-month"><span class="pie-dot"></span><span>Questo mese: <strong id="kpi-month">0</strong></span></div>
+                </div>
               </div>
-              <div class="form-group">
-                <label>Stato</label>
+            </div>
+          </section>
+
+          <div class="card card-requests">
+            <h3>Gestione richieste</h3>
+            <div class="filters">
+              <div class="form-group"><label>Cerca</label><input type="text" id="filter-text" placeholder="Nome, email..."></div>
+              <div class="form-group"><label>Stato</label>
                 <select id="filter-status">
                   <option value="">Tutti</option>
                   <option>In attesa</option>
@@ -143,22 +140,14 @@
                   <option>Rifiutata</option>
                 </select>
               </div>
-              <div class="form-group">
-                <label>Da</label>
-                <input type="date" id="filter-from">
-              </div>
-              <div class="form-group">
-                <label>A</label>
-                <input type="date" id="filter-to">
-              </div>
+              <div class="form-group"><label>Da</label><input type="date" id="filter-from"></div>
+              <div class="form-group"><label>A</label><input type="date" id="filter-to"></div>
             </div>
-            
             <div class="toolbar">
               <button id="btn-refresh" class="btn-secondary btn-sm">Aggiorna</button>
               <button class="btn-ghost btn-sm" onclick="exportData('csv')">CSV</button>
               <button class="btn-ghost btn-sm" onclick="exportData('json')">JSON</button>
             </div>
-            
             <div class="table-wrap">
               <table>
                 <thead>
@@ -176,20 +165,16 @@
             </div>
           </div>
         </div>
-        
-        <!-- Pubblica Avviso (solo manager/admin) -->
-        <div id="avviso-form-section" class="hidden" style="margin-bottom:16px">
+
+        <!-- Pubblica avviso (solo manager/admin) -->
+        <div id="avviso-form-section" class="hidden">
           <div class="card">
-            <h3>Pubblica Avviso</h3>
+            <h3>Pubblica avviso</h3>
             <div id="avviso-alert" class="alert hidden"></div>
             <form id="avviso-form">
               <div class="row row-2">
-                <div class="form-group">
-                  <label>Titolo</label>
-                  <input type="text" name="titolo" required placeholder="Titolo avviso">
-                </div>
-                <div class="form-group">
-                  <label>Priorità</label>
+                <div class="form-group"><label>Titolo</label><input type="text" name="titolo" required placeholder="Titolo avviso"></div>
+                <div class="form-group"><label>Priorità</label>
                   <select name="priorita">
                     <option value="Normale">Normale</option>
                     <option value="Alta">Alta</option>
@@ -197,42 +182,26 @@
                   </select>
                 </div>
               </div>
-              <div class="form-group">
-                <label>Messaggio</label>
-                <textarea name="messaggio" required placeholder="Contenuto dell'avviso..." style="min-height:60px"></textarea>
-              </div>
+              <div class="form-group"><label>Messaggio</label><textarea name="messaggio" required placeholder="Contenuto..." style="min-height:60px"></textarea></div>
               <button type="submit" class="btn-sm">Pubblica</button>
             </form>
           </div>
         </div>
-        
-        <!-- Profile Section (visibile a tutti) -->
-        <div class="card">
-          <h3>Modifica Profilo</h3>
+
+        <!-- Modifica profilo -->
+        <div class="card card-profile">
+          <h3>Modifica profilo</h3>
           <div id="profile-alert" class="alert hidden"></div>
-          
           <form id="profile-form">
             <div class="row row-2">
-              <div class="form-group">
-                <label>Nome</label>
-                <input type="text" name="name" required>
-              </div>
-              <div class="form-group">
-                <label>Email</label>
-                <input type="email" name="email" readonly>
-              </div>
+              <div class="form-group"><label>Nome</label><input type="text" name="name" required></div>
+              <div class="form-group"><label>Email</label><input type="email" name="email" readonly></div>
             </div>
             <div class="row row-2">
-              <div class="form-group">
-                <label>Telefono</label>
-                <input type="tel" name="phone" placeholder="Telefono">
-              </div>
-              <div class="form-group">
-                <label>Reparto</label>
-                <input type="text" name="department" placeholder="Reparto">
-              </div>
+              <div class="form-group"><label>Telefono</label><input type="tel" name="phone" placeholder="Telefono"></div>
+              <div class="form-group"><label>Reparto</label><input type="text" name="department" placeholder="Reparto"></div>
             </div>
-            <button type="submit">Salva Modifiche</button>
+            <button type="submit">Salva modifiche</button>
           </form>
         </div>
       </div>
