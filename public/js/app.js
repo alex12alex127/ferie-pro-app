@@ -671,13 +671,100 @@ async function initCalendar() {
           <span class="cal-nome">${esc(nome)}</span>
         </div>`;
       }).join('');
-      html += `<div class="cal-day${isWeekend ? ' weekend' : ''}${isToday ? ' today' : ''}"><span class="day-num">${d}</span><div class="cal-events">${eventsHtml}</div></div>`;
+      html += `<div class="cal-day${isWeekend ? ' weekend' : ''}${isToday ? ' today' : ''}" data-date="${dateStr}" onclick="showDayDetails('${dateStr}')"><span class="day-num">${d}</span><div class="cal-events">${eventsHtml}</div></div>`;
     }
     calendar.innerHTML = html;
   }
   window.prevMonth = () => { currentDate.setMonth(currentDate.getMonth() - 1); render(); };
   window.nextMonth = () => { currentDate.setMonth(currentDate.getMonth() + 1); render(); };
   render();
+}
+
+// Mostra i dettagli delle ferie per un giorno specifico
+async function showDayDetails(dateStr) {
+  try {
+    const data = await API.get(`/api/calendar/day?date=${encodeURIComponent(dateStr)}`);
+    
+    // Crea il contenuto del modal
+    let content = `<div class="modal-header">
+      <h3>Ferie per il ${formatDate(dateStr)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">`;
+    
+    if (data.length === 0) {
+      content += `<p class="text-muted">Nessuna ferie o permesso per questo giorno.</p>`;
+    } else {
+      content += `<div class="day-details-list">`;
+      data.forEach(item => {
+        const tipo = item.tipo || 'Ferie';
+        const colorClass = {
+          'Ferie': 'cal-ferie',
+          'Malattia': 'cal-malattia',
+          'Permesso': 'cal-permesso',
+          'ROL': 'cal-rol'
+        }[tipo] || 'cal-ferie';
+        
+        content += `<div class="day-detail-item ${colorClass}">
+          <div class="day-detail-header">
+            <span class="day-detail-icon">${getTipoIcon(tipo)}</span>
+            <strong>${esc(item.nome)}</strong>
+            <span class="day-detail-badge">${tipo}</span>
+          </div>
+          <div class="day-detail-info">
+            <span>Periodo: ${formatDate(item.inizio)} - ${formatDate(item.fine)}</span>
+            ${item.note ? `<br><small>Note: ${esc(item.note)}</small>` : ''}
+          </div>
+        </div>`;
+      });
+      content += `</div>`;
+    }
+    
+    content += `</div>`;
+    
+    // Mostra il modal
+    showModal(content);
+  } catch (error) {
+    console.error('Errore nel caricamento dei dettagli:', error);
+    showModal(`<div class="modal-header"><h3>Errore</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <div class="modal-body"><p class="text-error">Impossibile caricare i dettagli delle ferie.</p></div>`);
+  }
+}
+
+// Funzioni di supporto per il modal
+function showModal(content) {
+  let modal = document.getElementById('day-details-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'day-details-modal';
+    modal.className = 'modal';
+    modal.innerHTML = `<div class="modal-overlay" onclick="closeModal()"></div>
+      <div class="modal-content">${content}</div>`;
+    document.body.appendChild(modal);
+  } else {
+    modal.querySelector('.modal-content').innerHTML = content;
+  }
+  modal.classList.add('active');
+}
+
+function closeModal() {
+  const modal = document.getElementById('day-details-modal');
+  if (modal) modal.classList.remove('active');
+}
+
+function formatDate(dateStr) {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function getTipoIcon(tipo) {
+  const tipoIcon = {
+    'Ferie': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>',
+    'Malattia': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4m8-4v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M12 10v4m-2-2h4"/></svg>',
+    'Permesso': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+    'ROL': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>'
+  };
+  return tipoIcon[tipo] || tipoIcon['Ferie'];
 }
 
 // CANTIERI

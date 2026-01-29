@@ -587,6 +587,37 @@ app.get('/api/calendar', auth, (req, res) => {
   }
 });
 
+// CALENDAR DAY DETAILS
+app.get('/api/calendar/day', auth, (req, res) => {
+  const { date } = req.query;
+  if (!date) return res.status(400).json({ error: 'Data mancante' });
+  
+  // Manager/Admin vedono tutte le ferie, dipendenti solo quelle della loro sede
+  if (['admin', 'manager'].includes(req.user.role)) {
+    const requests = db.prepare(`
+      SELECT r.id, r.nome, r.email, r.inizio, r.fine, r.giorni, r.tipo, r.motivo, r.codice_malattia,
+             u.name as dipendente_nome, u.sede_id, s.nome as sede_nome
+      FROM requests r
+      JOIN users u ON r.user_id = u.id
+      LEFT JOIN sedi s ON u.sede_id = s.id
+      WHERE r.stato = 'Approvata' AND ? BETWEEN r.inizio AND r.fine
+      ORDER BY r.tipo, r.nome
+    `).all(date);
+    res.json(requests);
+  } else {
+    const requests = db.prepare(`
+      SELECT r.id, r.nome, r.email, r.inizio, r.fine, r.giorni, r.tipo, r.motivo, r.codice_malattia,
+             u.name as dipendente_nome, u.sede_id, s.nome as sede_nome
+      FROM requests r
+      JOIN users u ON r.user_id = u.id
+      LEFT JOIN sedi s ON u.sede_id = s.id
+      WHERE r.stato = 'Approvata' AND ? BETWEEN r.inizio AND r.fine AND u.sede_id = ?
+      ORDER BY r.tipo, r.nome
+    `).all(date, req.user.sede_id);
+    res.json(requests);
+  }
+});
+
 // EXPORT
 app.get('/api/export', auth, isManager, (req, res) => {
   const { format, from, to, stato } = req.query;
