@@ -14,6 +14,7 @@ const API = {
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 const esc = s => { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; };
+const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 const badge = s => s === 'Approvata' || s === 'Consegnato' ? 'badge-approved' : s === 'Rifiutata' ? 'badge-rejected' : 'badge-pending';
 const fmtDate = d => d ? new Date(d).toLocaleDateString('it-IT') : '-';
 const isExpiring = d => { if (!d) return false; const diff = (new Date(d) - new Date()) / (1000 * 60 * 60 * 24); return diff < 30 && diff > 0; };
@@ -57,7 +58,7 @@ function createFeriePieChart(totalDays, usedDays) {
   ctx.clearRect(0, 0, w, h);
 
   if (totalDays === 0) {
-    drawDonutSlice(ctx, cx, cy, r, rInner, 0, Math.PI * 2, '#e2e8f0', null);
+    drawDonutSlice(ctx, cx, cy, r, rInner, 0, Math.PI * 2, '#eef2f7', null);
     return;
   }
   const usedPct = usedDays / totalDays;
@@ -68,12 +69,12 @@ function createFeriePieChart(totalDays, usedDays) {
 
   if (usedDays > 0 && usedPct > 0.001) {
     const sweep = full * usedPct;
-    drawDonutSlice(ctx, cx, cy, r, rInner, start, start + sweep, '#ef4444', 'rgba(255,255,255,0.5)');
+    drawDonutSlice(ctx, cx, cy, r, rInner, start, start + sweep, '#dc2626', 'rgba(255,255,255,0.4)');
     start += sweep + PIE_GAP;
   }
   if (remainingDays > 0 && remPct > 0.001) {
     const sweep = full * remPct;
-    drawDonutSlice(ctx, cx, cy, r, rInner, start, start + sweep, '#10b981', 'rgba(255,255,255,0.5)');
+    drawDonutSlice(ctx, cx, cy, r, rInner, start, start + sweep, '#059669', 'rgba(255,255,255,0.4)');
   }
 }
 
@@ -102,12 +103,12 @@ function createRequestsPieChart(stats) {
   ctx.clearRect(0, 0, w, h);
 
   const items = [
-    { v: pending, c: '#f59e0b' },
-    { v: approved, c: '#10b981' },
-    { v: rejected, c: '#ef4444' }
+    { v: pending, c: '#d97706' },
+    { v: approved, c: '#059669' },
+    { v: rejected, c: '#dc2626' }
   ].filter(x => x.v > 0);
   if (items.length === 0) {
-    drawDonutSlice(ctx, cx, cy, r, rInner, 0, Math.PI * 2, '#e2e8f0', null);
+    drawDonutSlice(ctx, cx, cy, r, rInner, 0, Math.PI * 2, '#eef2f7', null);
     return;
   }
   let start = -Math.PI / 2;
@@ -488,7 +489,8 @@ async function initDashboard() {
     }
     window.action = async (id, stato) => { await API.patch(`/api/requests/${id}/status`, { stato }); load(); };
     window.exportData = f => window.open(`/api/export?format=${f}&from=${ff.value}&to=${fto.value}&stato=${fs.value}`);
-    [ft, fs, ff, fto].forEach(el => el.addEventListener('input', render));
+    const renderDeb = debounce(render, 120);
+    [ft, fs, ff, fto].forEach(el => el?.addEventListener('input', renderDeb));
     $('#btn-refresh').addEventListener('click', load);
     load();
   }
@@ -616,7 +618,8 @@ async function initAdmin() {
     } catch { alert.textContent = 'Errore o sede già esistente'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
   });
   
-  [ft, fs].forEach(el => el.addEventListener('input', renderReq));
+  const renderDeb = debounce(renderReq, 120);
+  [ft, fs].forEach(el => el?.addEventListener('input', renderDeb));
   $('#btn-refresh').addEventListener('click', loadReq);
   loadReq(); loadUsers();
   
@@ -939,7 +942,7 @@ async function initCantieri() {
       resetForm(); load();
     } catch { alert.textContent = 'Errore'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
   });
-  filter.addEventListener('input', render);
+  filter.addEventListener('input', debounce(render, 120));
   load();
 }
 
