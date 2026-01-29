@@ -19,6 +19,84 @@ const fmtDate = d => d ? new Date(d).toLocaleDateString('it-IT') : '-';
 const isExpiring = d => { if (!d) return false; const diff = (new Date(d) - new Date()) / (1000 * 60 * 60 * 24); return diff < 30 && diff > 0; };
 const isExpired = d => d && new Date(d) < new Date();
 
+// Funzione per creare il grafico a torta delle ferie
+function createFeriePieChart(totalDays, usedDays) {
+  const canvas = $('#ferie-pie-chart');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  const remainingDays = totalDays - usedDays;
+  
+  // Calcola le percentuali
+  const usedPercent = (usedDays / totalDays) * 100;
+  const remainingPercent = (remainingDays / totalDays) * 100;
+  
+  // Dimensioni del canvas
+  const width = canvas.width;
+  const height = canvas.height;
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const radius = Math.min(width, height) / 2 - 10;
+  
+  // Pulisci il canvas
+  ctx.clearRect(0, 0, width, height);
+  
+  // Colori
+  const remainingColor = '#10b981'; // Verde
+  const usedColor = '#ef4444'; // Rosso
+  const totalColor = '#6b7280'; // Grigio
+  
+  // Disegna il cerchio di sfondo (totale)
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  ctx.fillStyle = totalColor + '20'; // Colore con trasparenza
+  ctx.fill();
+  
+  // Disegna la torta
+  let startAngle = -Math.PI / 2; // Inizia da -90° (in alto)
+  
+  // Se ci sono giorni utilizzati, disegna la sezione
+  if (usedDays > 0) {
+    const usedAngle = (usedPercent / 100) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.arc(centerX, centerY, radius, startAngle, startAngle + usedAngle);
+    ctx.closePath();
+    ctx.fillStyle = usedColor;
+    ctx.fill();
+    startAngle += usedAngle;
+  }
+  
+  // Disegna i giorni rimanenti
+  if (remainingDays > 0) {
+    const remainingAngle = (remainingPercent / 100) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.arc(centerX, centerY, radius, startAngle, startAngle + remainingAngle);
+    ctx.closePath();
+    ctx.fillStyle = remainingColor;
+    ctx.fill();
+  }
+  
+  // Disegna il bordo
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = totalColor + '40';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  // Aggiungi testo al centro
+  ctx.fillStyle = 'var(--text)';
+  ctx.font = 'bold 16px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`${remainingDays}`, centerX, centerY - 8);
+  
+  ctx.fillStyle = 'var(--text-muted)';
+  ctx.font = '10px Inter, sans-serif';
+  ctx.fillText('giorni', centerX, centerY + 10);
+}
+
 // SVG Icons (Lucide-style)
 const icons = {
   home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
@@ -305,9 +383,16 @@ async function initDashboard() {
   // Carica profilo e giorni ferie
   const profile = await API.get('/api/profile');
   $('#days-info').innerHTML = `<b>${profile.total_days - profile.used_days}</b> giorni rimanenti su ${profile.total_days}`;
-  $('#days-bar').style.width = `${((profile.total_days - profile.used_days) / profile.total_days) * 100}%`;
   $('#sede-badge').textContent = profile.sede_nome ? `📍 ${profile.sede_nome}` : 'Sede non assegnata';
   $('#profile-name').textContent = profile.name;
+  
+  // Aggiorna i valori della legenda del grafico a torta
+  $('#remaining-days').textContent = profile.total_days - profile.used_days;
+  $('#used-days').textContent = profile.used_days;
+  $('#total-days').textContent = profile.total_days;
+  
+  // Crea il grafico a torta
+  createFeriePieChart(profile.total_days, profile.used_days);
   
   // Avatar
   const initials = profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
