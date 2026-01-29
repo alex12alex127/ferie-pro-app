@@ -155,7 +155,32 @@ const icons = {
   download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>',
   upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>'
 };
+
+// Avatar icons – tema elettricista (tutti gli utenti possono sceglierne una)
+const avatarIcons = {
+  wrench: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>', label: 'Chiave' },
+  screwdriver: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 11-6-6"/><path d="m6 15 6 6"/><path d="m14 5 4 4"/></svg>', label: 'Cacciavite' },
+  plug: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></svg>', label: 'Spina' },
+  lightbulb: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>', label: 'Lampadina' },
+  zap: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>', label: 'Fulmine' },
+  cable: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9a2 2 0 0 1-2-2V5h6v2a2 2 0 0 1-2 2Z"/><path d="M4 15a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2H4Z"/><path d="M20 15V9a2 2 0 0 0-2-2h-2"/><path d="M4 15h16"/></svg>', label: 'Cavo' },
+  hardhat: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2z"/><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M4 15v-3a6 6 0 0 1 6-6"/><path d="M14 6a6 6 0 0 1 6 6v3"/></svg>', label: 'Casco' },
+  drill: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 10v4"/><path d="M10 10v4"/><path d="M12 8v8"/><path d="M8 14h8"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m6 6 1.5 1.5"/><path d="m16.5 16.5 1.5 1.5"/><path d="M6 18 4 20"/><path d="M18 6l2 2"/></svg>', label: 'Trapano' },
+  ruler: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 6 18"/><path d="M3 21 18 6"/><path d="M7 3v4"/><path d="M11 3v4"/><path d="M15 3v4"/><path d="M19 3v4"/><path d="M3 7h4"/><path d="M3 11h4"/><path d="M3 15h4"/><path d="M3 19h4"/></svg>', label: 'Metro' },
+  battery: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="10" x="2" y="7" rx="2" ry="2"/><line x1="22" x2="22" y1="11" y2="13"/></svg>', label: 'Batteria' },
+  switch: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9h12a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1Z"/><path d="M9 10v4"/><path d="M15 10v4"/></svg>', label: 'Interruttore' },
+  fuse: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="12" height="16" x="6" y="6" rx="1"/><path d="M10 10h4"/><path d="M10 14h4"/></svg>', label: 'Fusibile' },
+  voltmeter: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="m16.24 16.24 2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="m16.24 7.76 2.83-2.83"/><circle cx="12" cy="12" r="4"/><path d="M12 10v4"/><path d="m10 12 2 2 2-2"/></svg>', label: 'Multimetro' },
+  coil: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6c.5 1 2 4 5 4s4.5-3 5-4"/><path d="M3 10c.5 1 2 4 5 4s4.5-3 5-4"/><path d="M3 14c.5 1 2 4 5 4s4.5-3 5-4"/><path d="M3 18c.5 1 2 4 5 4s4.5-3 5-4"/><path d="M21 6c-.5 1-2 4-5 4s-4.5-3-5-4"/><path d="M21 10c-.5 1-2 4-5 4s-4.5-3-5-4"/><path d="M21 14c-.5 1-2 4-5 4s-4.5-3-5-4"/><path d="M21 18c-.5 1-2 4-5 4s-4.5-3-5-4"/></svg>', label: 'Bobina' },
+  outlet: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 8v2"/><path d="M12 8v4"/><path d="M17 8v2"/></svg>', label: 'Presa' }
+};
+
+const avatarIconKeys = Object.keys(avatarIcons);
 const icon = (name, size = 18) => `<span class="icon" style="width:${size}px;height:${size}px">${icons[name] || ''}</span>`;
+const avatarIconHtml = (key, size = 32) => {
+  const t = avatarIcons[key];
+  return t ? `<span class="avatar-icon" style="width:${size}px;height:${size}px" data-key="${key}" title="${esc(t.label)}">${t.svg}</span>` : '';
+};
 
 // Toggle mobile menu
 function toggleMenu() {
@@ -416,14 +441,10 @@ async function initDashboard() {
   
   createFeriePieChart(profile.total_days || 0, profile.used_days || 0);
   
-  // Avatar
-  const initials = profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  $('#avatar-initials').textContent = initials;
-  if (profile.avatar) {
-    $('#avatar-img').src = profile.avatar;
-    $('#avatar-img').style.display = 'block';
-    $('#avatar-initials').style.display = 'none';
-  }
+  // Avatar icona (tema elettricista)
+  const avatarKey = (profile.avatar && avatarIcons[profile.avatar]) ? profile.avatar : avatarIconKeys[0];
+  const wrap = $('#avatar-icon-wrap');
+  if (wrap) wrap.innerHTML = avatarIconHtml(avatarKey, 44);
   
   window.changeAvatar = () => window.location.href = '/settings.html';
   
@@ -981,56 +1002,48 @@ async function initSettings() {
   renderNav('settings');
   
   const profile = await API.get('/api/profile');
-  const initials = profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  let selectedAvatarKey = (profile.avatar && avatarIcons[profile.avatar]) ? profile.avatar : avatarIconKeys[0];
   
-  // Avatar preview
-  $('#settings-avatar-initials').textContent = initials;
-  if (profile.avatar) {
-    $('#avatar-url').value = profile.avatar;
-    $('#settings-avatar-img').src = profile.avatar;
-    $('#settings-avatar-img').style.display = 'block';
-    $('#settings-avatar-initials').style.display = 'none';
+  const preview = $('#settings-avatar-preview');
+  const grid = $('#avatar-icons-grid');
+  const alertEl = $('#avatar-alert');
+  
+  function renderPreview() {
+    if (preview) preview.innerHTML = avatarIconHtml(selectedAvatarKey, 56);
   }
   
-  // Preview on URL change
-  $('#avatar-url').addEventListener('input', () => {
-    const url = $('#avatar-url').value;
-    if (url) {
-      $('#settings-avatar-img').src = url;
-      $('#settings-avatar-img').style.display = 'block';
-      $('#settings-avatar-initials').style.display = 'none';
-    } else {
-      $('#settings-avatar-img').style.display = 'none';
-      $('#settings-avatar-initials').style.display = 'flex';
-    }
-  });
+  function renderGrid() {
+    if (!grid) return;
+    grid.innerHTML = avatarIconKeys.map(key => {
+      const t = avatarIcons[key];
+      const sel = key === selectedAvatarKey ? ' selected' : '';
+      return `<button type="button" class="avatar-icon-btn${sel}" data-key="${key}" title="${esc(t.label)}"><span class="icon">${t.svg}</span></button>`;
+    }).join('');
+    grid.querySelectorAll('.avatar-icon-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedAvatarKey = btn.dataset.key;
+        grid.querySelectorAll('.avatar-icon-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        renderPreview();
+      });
+    });
+  }
   
-  // Save avatar
+  renderPreview();
+  renderGrid();
+  
   window.saveAvatar = async () => {
-    const url = $('#avatar-url').value.trim();
-    const alert = $('#avatar-alert');
-    alert.classList.add('hidden');
+    alertEl.classList.add('hidden');
     try {
-      await API.patch('/api/profile', { avatar: url || null });
-      alert.textContent = 'Foto salvata!';
-      alert.className = 'alert alert-success';
-      alert.classList.remove('hidden');
+      await API.patch('/api/profile', { avatar: selectedAvatarKey });
+      alertEl.textContent = 'Avatar salvato!';
+      alertEl.className = 'alert alert-success';
+      alertEl.classList.remove('hidden');
     } catch {
-      alert.textContent = 'Errore nel salvataggio';
-      alert.className = 'alert alert-error';
-      alert.classList.remove('hidden');
+      alertEl.textContent = 'Errore nel salvataggio';
+      alertEl.className = 'alert alert-error';
+      alertEl.classList.remove('hidden');
     }
-  };
-  
-  // Remove avatar
-  window.removeAvatar = async () => {
-    $('#avatar-url').value = '';
-    $('#settings-avatar-img').style.display = 'none';
-    $('#settings-avatar-initials').style.display = 'flex';
-    await API.patch('/api/profile', { avatar: null });
-    $('#avatar-alert').textContent = 'Foto rimossa';
-    $('#avatar-alert').className = 'alert alert-success';
-    $('#avatar-alert').classList.remove('hidden');
   };
   
   // Password form
