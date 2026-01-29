@@ -1089,89 +1089,111 @@ async function initDPI() {
   const user = Auth.getUser();
   const isManager = ['admin', 'manager'].includes(user.role);
   
-  // Hide manager-only elements for employees
   if (!isManager) {
     $('#form-card')?.remove();
     $('#tab-catalogo')?.remove();
     $('#tab-gestione')?.remove();
+    $('#dpi-filters')?.classList.add('hidden');
+    $('#dpi-mio-riepilogo')?.classList.remove('hidden');
   }
   
   let catalogo = [];
   let users = [];
   let assegnazioni = [];
   
-  // Load data
   async function loadData() {
     catalogo = await API.get('/api/dpi/catalogo');
     assegnazioni = await API.get('/api/dpi/assegnazioni');
-    if (isManager) {
-      users = await API.get('/api/users');
-    }
+    if (isManager) users = await API.get('/api/users');
   }
   
   await loadData();
   
-  // Populate selects
+  function refreshDpiSelect() {
+    const selectDpi = $('#select-dpi');
+    if (!selectDpi) return;
+    selectDpi.innerHTML = '<option value="">Seleziona DPI...</option>';
+    const byCategoria = {};
+    catalogo.forEach(d => {
+      if (!byCategoria[d.categoria]) byCategoria[d.categoria] = [];
+      byCategoria[d.categoria].push(d);
+    });
+    Object.entries(byCategoria).forEach(([cat, items]) => {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = cat;
+      items.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.id;
+        opt.textContent = d.nome;
+        opt.dataset.taglie = d.taglia_disponibili || 'Unica';
+        optgroup.appendChild(opt);
+      });
+      selectDpi.appendChild(optgroup);
+    });
+  }
+  
   function populateSelects() {
-    // Users dropdown
     const filterUser = $('#filter-user');
     const selectUser = $('#select-user');
-    
-    if (isManager) {
+    if (isManager && users.length) {
       users.forEach(u => {
-        filterUser.innerHTML += `<option value="${u.id}">${u.name}</option>`;
-        if (selectUser) selectUser.innerHTML += `<option value="${u.id}">${u.name}</option>`;
+        if (filterUser) filterUser.innerHTML += `<option value="${u.id}">${esc(u.name)}</option>`;
+        if (selectUser) selectUser.innerHTML += `<option value="${u.id}">${esc(u.name)}</option>`;
       });
     }
-    
-    // DPI dropdown
-    const selectDpi = $('#select-dpi');
-    if (selectDpi) {
-      const byCategoria = {};
-      catalogo.forEach(d => {
-        if (!byCategoria[d.categoria]) byCategoria[d.categoria] = [];
-        byCategoria[d.categoria].push(d);
-      });
-      Object.entries(byCategoria).forEach(([cat, items]) => {
-        const optgroup = document.createElement('optgroup');
-        optgroup.label = cat;
-        items.forEach(d => {
-          const opt = document.createElement('option');
-          opt.value = d.id;
-          opt.textContent = d.nome;
-          opt.dataset.taglie = d.taglia_disponibili || 'Unica';
-          optgroup.appendChild(opt);
-        });
-        selectDpi.appendChild(optgroup);
-      });
-    }
+    refreshDpiSelect();
   }
   populateSelects();
   
-  // Update taglie when DPI changes
   window.updateTaglie = () => {
     const select = $('#select-dpi');
     const taglieSelect = $('#select-taglia');
-    const opt = select.options[select.selectedIndex];
-    const taglie = opt?.dataset?.taglie?.split(',') || ['Unica'];
-    
-    taglieSelect.innerHTML = taglie.map(t => `<option value="${t.trim()}">${t.trim()}</option>`).join('');
+    const opt = select?.options[select.selectedIndex];
+    const taglie = opt?.dataset?.taglie?.split(',')?.map(s => s.trim()) || ['Unica'];
+    if (taglieSelect) taglieSelect.innerHTML = taglie.map(t => `<option value="${t}">${esc(t)}</option>`).join('');
   };
   
-  // Render assegnazioni
+  function isScaduto(a) {
+    return a.data_scadenza && new Date(a.data_scadenza) < new Date();
+  }
+  function isInScadenza(a) {
+    if (!a.data_scadenza) return false;
+    const d = new Date(a.data_scadenza);
+    const now = new Date();
+    return d >= now && d < new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  }
+  
+  function renderRiepilogoMio() {
+    if (isManager) return;
+    const tot = assegnazioni.filter(a => a.stato === 'attivo').length;
+    const scad = assegnazioni.filter(a => a.stato === 'attivo' && isInScadenza(a)).length;
+    const exp = assegnazioni.filter(a => a.stato === 'attivo' && isScaduto(a)).length;
+    const v = (id, n) => { const el = $(id); if (el) el.textContent = n; };
+    v('#dpi-kpi-tot', tot);
+    v('#dpi-kpi-scad', scad);
+    v('#dpi-kpi-exp', exp);
+  }
+  
   function renderAssegnazioni() {
     const container = $('#assegnazioni-list');
-    const filterVal = $('#filter-user').value;
+    const filterUserVal = $('#filter-user')?.value;
+    const filterStatoVal = $('#filter-stato')?.value;
     
     let filtered = assegnazioni;
-    if (filterVal) filtered = assegnazioni.filter(a => a.user_id == filterVal);
+    if (filterUserVal) filtered = filtered.filter(a => a.user_id == filterUserVal);
+    if (filterStatoVal) {
+      if (filterStatoVal === 'attivo') filtered = filtered.filter(a => a.stato === 'attivo' && !isScaduto(a) && !isInScadenza(a));
+      else if (filterStatoVal === 'inscadenza') filtered = filtered.filter(a => a.stato === 'attivo' && isInScadenza(a));
+      else if (filterStatoVal === 'scaduto') filtered = filtered.filter(a => isScaduto(a));
+    }
+    
+    renderRiepilogoMio();
     
     if (filtered.length === 0) {
       container.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">Nessun DPI assegnato</p>';
       return;
     }
     
-    // Group by user
     const byUser = {};
     filtered.forEach(a => {
       const key = a.dipendente_nome;
@@ -1183,19 +1205,19 @@ async function initDPI() {
       <div class="dpi-user-card" style="background:var(--bg-glass);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
           <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:13px">
-            ${name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2)}
+            ${esc(name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2))}
           </div>
-          <strong>${name}</strong>
+          <strong>${esc(name)}</strong>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px">
           ${items.map(a => {
-            const scaduto = a.data_scadenza && new Date(a.data_scadenza) < new Date();
-            const scadeBrv = a.data_scadenza && new Date(a.data_scadenza) < new Date(Date.now() + 30*24*60*60*1000);
+            const scaduto = isScaduto(a);
+            const scadeBrv = isInScadenza(a);
             return `
               <div class="dpi-item" style="background:var(--bg-card);border:1px solid ${scaduto ? 'var(--danger)' : scadeBrv ? 'var(--warning)' : 'var(--border)'};border-radius:8px;padding:10px 14px;font-size:13px;position:relative">
-                <div style="font-weight:500">${a.dpi_nome}</div>
+                <div style="font-weight:500">${esc(a.dpi_nome)}</div>
                 <div style="color:var(--text-muted);font-size:11px;margin-top:2px">
-                  ${a.taglia ? `Tg. ${a.taglia}` : ''} ${a.quantita > 1 ? `x${a.quantita}` : ''}
+                  ${a.taglia ? `Tg. ${esc(a.taglia)}` : ''} ${a.quantita > 1 ? `x${a.quantita}` : ''}
                 </div>
                 <div style="color:var(--text-muted);font-size:10px;margin-top:4px">
                   Consegna: ${new Date(a.data_consegna).toLocaleDateString('it-IT')}
@@ -1212,8 +1234,8 @@ async function initDPI() {
   }
   renderAssegnazioni();
   
-  // Filter change
-  $('#filter-user').addEventListener('change', renderAssegnazioni);
+  $('#filter-user')?.addEventListener('change', renderAssegnazioni);
+  $('#filter-stato')?.addEventListener('change', renderAssegnazioni);
   
   // Render catalogo
   function renderCatalogo() {
@@ -1251,8 +1273,7 @@ async function initDPI() {
   
   // Tabs
   window.showTab = (tab) => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelector(`.tab[onclick="showTab('${tab}')"]`)?.classList.add('active');
+    document.querySelectorAll('.dpi-tabs .tab').forEach(t => t.classList.toggle('active', t.dataset?.tab === tab));
     $('#panel-assegnazioni').classList.toggle('hidden', tab !== 'assegnazioni');
     $('#panel-catalogo')?.classList.toggle('hidden', tab !== 'catalogo');
     $('#panel-gestione')?.classList.toggle('hidden', tab !== 'gestione');
@@ -1280,7 +1301,8 @@ async function initDPI() {
       };
       
       try {
-        await API.post('/api/dpi/assegnazioni', data);
+        const res = await API.post('/api/dpi/assegnazioni', data);
+        if (res?.error) throw new Error(res.error);
         alert.textContent = 'DPI assegnato con successo!';
         alert.className = 'alert alert-success';
         alert.classList.remove('hidden');
@@ -1289,7 +1311,7 @@ async function initDPI() {
         await loadData();
         renderAssegnazioni();
       } catch (err) {
-        alert.textContent = err.message || 'Errore';
+        alert.textContent = err?.message || 'Errore';
         alert.className = 'alert alert-error';
         alert.classList.remove('hidden');
       }
@@ -1299,9 +1321,15 @@ async function initDPI() {
   // Delete assignment
   window.delAssegnazione = async (id) => {
     if (!confirm('Rimuovere questa assegnazione DPI?')) return;
-    await API.delete('/api/dpi/assegnazioni/' + id);
-    await loadData();
-    renderAssegnazioni();
+    try {
+      const res = await API.delete('/api/dpi/assegnazioni/' + id);
+      if (res?.error) throw new Error(res.error);
+      await loadData();
+      renderAssegnazioni();
+    } catch (err) {
+      const al = $('#alert');
+      if (al) { al.textContent = err?.message || 'Errore'; al.className = 'alert alert-error'; al.classList.remove('hidden'); }
+    }
   };
   
   // Catalogo form
@@ -1311,15 +1339,15 @@ async function initDPI() {
     catForm.addEventListener('submit', async e => {
       e.preventDefault();
       alertCat.classList.add('hidden');
-      
       try {
-        await API.post('/api/dpi/catalogo', {
+        const res = await API.post('/api/dpi/catalogo', {
           nome: catForm.nome.value,
           categoria: catForm.categoria.value,
           descrizione: catForm.descrizione.value,
           taglia_disponibili: catForm.taglia_disponibili.value || 'Unica',
           codice_barre: catForm.codice_barre.value || null
         });
+        if (res?.error) throw new Error(res.error);
         alertCat.textContent = 'DPI aggiunto al catalogo!';
         alertCat.className = 'alert alert-success';
         alertCat.classList.remove('hidden');
@@ -1327,46 +1355,32 @@ async function initDPI() {
         catForm.taglia_disponibili.value = 'Unica';
         catForm.codice_barre.value = '';
         await loadData();
+        refreshDpiSelect();
         renderCatalogo();
-        // Update select
-        const selectDpi = $('#select-dpi');
-        if (selectDpi) {
-          selectDpi.innerHTML = '<option value="">Seleziona DPI...</option>';
-          const byCategoria = {};
-          catalogo.forEach(d => {
-            if (!byCategoria[d.categoria]) byCategoria[d.categoria] = [];
-            byCategoria[d.categoria].push(d);
-          });
-          Object.entries(byCategoria).forEach(([cat, items]) => {
-            const optgroup = document.createElement('optgroup');
-            optgroup.label = cat;
-            items.forEach(d => {
-              const opt = document.createElement('option');
-              opt.value = d.id;
-              opt.textContent = d.nome;
-              opt.dataset.taglie = d.taglia_disponibili || 'Unica';
-              optgroup.appendChild(opt);
-            });
-            selectDpi.appendChild(optgroup);
-          });
-        }
       } catch (err) {
-        alertCat.textContent = err.message || 'Errore';
+        alertCat.textContent = err?.message || 'Errore';
         alertCat.className = 'alert alert-error';
         alertCat.classList.remove('hidden');
       }
     });
   }
   
-  // Delete DPI from catalogo
   window.delDpi = async (id) => {
     if (!confirm('Eliminare questo DPI dal catalogo?')) return;
     try {
-      await API.delete('/api/dpi/catalogo/' + id);
+      const res = await API.delete('/api/dpi/catalogo/' + id);
+      if (res?.error) throw new Error(res.error);
       await loadData();
+      refreshDpiSelect();
       renderCatalogo();
     } catch (err) {
-      alert(err.message || 'Impossibile eliminare: DPI assegnato a dipendenti');
+      const ac = $('#alert-cat');
+      if (ac) {
+        ac.textContent = err?.message || 'Impossibile eliminare: DPI assegnato a dipendenti';
+        ac.className = 'alert alert-error';
+        ac.classList.remove('hidden');
+      }
+      showTab('catalogo');
     }
   };
   
@@ -1412,46 +1426,23 @@ async function initDPI() {
       alertEdit.classList.add('hidden');
       
       try {
-        await API.patch('/api/dpi/catalogo/' + editForm.edit_id.value, {
+        const res = await API.patch('/api/dpi/catalogo/' + editForm.edit_id.value, {
           nome: editForm.edit_nome.value,
           categoria: editForm.edit_categoria.value,
           descrizione: editForm.edit_descrizione.value,
           taglia_disponibili: editForm.edit_taglia_disponibili.value || 'Unica',
           codice_barre: editForm.edit_codice_barre.value || null
         });
-        
+        if (res?.error) throw new Error(res.error);
         alertEdit.textContent = 'DPI aggiornato con successo!';
         alertEdit.className = 'alert alert-success';
         alertEdit.classList.remove('hidden');
-        
         await loadData();
+        refreshDpiSelect();
         renderCatalogo();
         cancelEdit();
-        
-        // Update select dropdown
-        const selectDpi = $('#select-dpi');
-        if (selectDpi) {
-          selectDpi.innerHTML = '<option value="">Seleziona DPI...</option>';
-          const byCategoria = {};
-          catalogo.forEach(d => {
-            if (!byCategoria[d.categoria]) byCategoria[d.categoria] = [];
-            byCategoria[d.categoria].push(d);
-          });
-          Object.entries(byCategoria).forEach(([cat, items]) => {
-            const optgroup = document.createElement('optgroup');
-            optgroup.label = cat;
-            items.forEach(d => {
-              const opt = document.createElement('option');
-              opt.value = d.id;
-              opt.textContent = d.nome;
-              opt.dataset.taglie = d.taglia_disponibili || 'Unica';
-              optgroup.appendChild(opt);
-            });
-            selectDpi.appendChild(optgroup);
-          });
-        }
       } catch (err) {
-        alertEdit.textContent = err.message || 'Errore aggiornamento';
+        alertEdit.textContent = err?.message || 'Errore aggiornamento';
         alertEdit.className = 'alert alert-error';
         alertEdit.classList.remove('hidden');
       }
@@ -1512,13 +1503,14 @@ async function initDPI() {
       }
       
       const response = await API.post('/api/dpi/import', data);
-      
+      if (response?.error) throw new Error(response.error);
       alertImport.textContent = response.message;
       alertImport.className = 'alert alert-success';
       alertImport.classList.remove('hidden');
       
       fileInput.value = '';
       await loadData();
+      refreshDpiSelect();
       renderCatalogo();
       
       // Update select dropdown
@@ -1546,7 +1538,7 @@ async function initDPI() {
       
       setTimeout(() => alertImport.classList.add('hidden'), 5000);
     } catch (err) {
-      alertImport.textContent = 'Errore import: ' + err.message;
+      alertImport.textContent = 'Errore import: ' + (err?.message || err);
       alertImport.className = 'alert alert-error';
       alertImport.classList.remove('hidden');
     }

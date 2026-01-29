@@ -41,10 +41,19 @@
       
       <div class="container">
         <!-- Tabs -->
-        <div class="tabs" style="margin-bottom:20px">
-          <button class="tab active" onclick="showTab('assegnazioni')">Assegnazioni</button>
-          <button class="tab" onclick="showTab('catalogo')" id="tab-catalogo">Catalogo DPI</button>
-          <button class="tab" onclick="showTab('gestione')" id="tab-gestione">Gestione Avanzata</button>
+        <div class="tabs dpi-tabs" style="margin-bottom:20px">
+          <button class="tab active" data-tab="assegnazioni" onclick="showTab('assegnazioni')">Assegnazioni</button>
+          <button class="tab" data-tab="catalogo" onclick="showTab('catalogo')" id="tab-catalogo">Catalogo DPI</button>
+          <button class="tab" data-tab="gestione" onclick="showTab('gestione')" id="tab-gestione">Gestione Avanzata</button>
+        </div>
+        
+        <!-- I tuoi DPI (solo dipendenti) -->
+        <div id="dpi-mio-riepilogo" class="hidden dpi-riepilogo card">
+          <div class="dpi-riepilogo-grid">
+            <div class="dpi-kpi"><span class="dpi-kpi-value" id="dpi-kpi-tot">0</span><span class="dpi-kpi-label">Assegnati</span></div>
+            <div class="dpi-kpi dpi-kpi-warn"><span class="dpi-kpi-value" id="dpi-kpi-scad">0</span><span class="dpi-kpi-label">In scadenza</span></div>
+            <div class="dpi-kpi dpi-kpi-danger"><span class="dpi-kpi-value" id="dpi-kpi-exp">0</span><span class="dpi-kpi-label">Scaduti</span></div>
+          </div>
         </div>
         
         <!-- Tab Assegnazioni -->
@@ -52,11 +61,19 @@
           <div class="grid grid-2">
             <!-- Lista Assegnazioni -->
             <div class="card">
-              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+              <div class="dpi-list-header">
                 <h3 style="margin:0">DPI Assegnati</h3>
-                <select id="filter-user" class="select-filter">
-                  <option value="">Tutti i dipendenti</option>
-                </select>
+                <div class="dpi-filters" id="dpi-filters">
+                  <select id="filter-user" class="select-filter">
+                    <option value="">Tutti i dipendenti</option>
+                  </select>
+                  <select id="filter-stato" class="select-filter" title="Filtra per stato">
+                    <option value="">Tutti</option>
+                    <option value="attivo">Attivi</option>
+                    <option value="inscadenza">In scadenza</option>
+                    <option value="scaduto">Scaduti</option>
+                  </select>
+                </div>
               </div>
               
               <div id="assegnazioni-list"></div>

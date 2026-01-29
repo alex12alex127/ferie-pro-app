@@ -1176,6 +1176,75 @@ td small {
   max-width: 100%;
 }
 
+.dpi-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.dpi-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dpi-filters .select-filter {
+  min-width: 140px;
+}
+
+/* Riepilogo "I tuoi DPI" (dipendenti) */
+.dpi-riepilogo {
+  margin-bottom: 20px;
+}
+
+.dpi-riepilogo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.dpi-kpi {
+  text-align: center;
+  padding: 16px;
+  background: var(--bg-glass);
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border);
+}
+
+.dpi-kpi-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.dpi-kpi-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.dpi-kpi-warn .dpi-kpi-value { color: var(--warning); }
+.dpi-kpi-danger .dpi-kpi-value { color: var(--danger); }
+
+@media (max-width: 480px) {
+  .dpi-riepilogo-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .dpi-filters {
+    width: 100%;
+  }
+
+  .dpi-filters .select-filter {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
 .profile-info {
   min-width: 150px;
 }
