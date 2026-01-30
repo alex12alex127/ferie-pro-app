@@ -3,6 +3,9 @@ const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const compression = require('compression');
 const path = require('path');
 const fs = require('fs');
 
@@ -12,10 +15,53 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'ferie-secret-key-change-in-production';
 
-// Middleware
-app.use(cors());
+// Middleware di Sicurezza e Performance
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      scriptSrc: ["'self'"],
+    },
+  },
+}));
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minuti
+  max: 100, // limita ogni IP a 100 richieste per finestra
+  message: 'Troppe richieste da questo IP, riprova più tardi.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', limiter);
+
+// Compression
+app.use(compression());
+
+// CORS configurato per produzione
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' ? process.env.ALLOWED_ORIGINS : '*',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json({ limit: '10mb' })); // Aumentato limite per upload immagini
-app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'], index: 'index.html' }));
+app.use(express.static(path.join(__dirname, 'public'), {
+  extensions: ['html'],
+  index: 'index.html',
+  maxAge: '1h',
+  setHeaders: (res, path) => {
+    if (path.endsWith('.css')) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000');
+    } else if (path.endsWith('.js')) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000');
+    }
+  }
+}));
 
 // Inizializzazione Database
 const dataDir = path.join(__dirname, 'data');
