@@ -189,6 +189,66 @@ function toggleMenu() {
   $('#overlay')?.classList.toggle('open');
 }
 
+// Sidebar collapse: solo icone quando ristretto, click icona ricompare la barra
+const SIDEBAR_COLLAPSED_KEY = 'sidebarCollapsed';
+function isSidebarCollapsed() {
+  return $('#sidebar')?.classList.contains('collapsed');
+}
+function collapseSidebar() {
+  const s = $('#sidebar');
+  if (s) {
+    s.classList.add('collapsed');
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, '1');
+  }
+}
+function expandSidebar() {
+  const s = $('#sidebar');
+  if (s) {
+    s.classList.remove('collapsed');
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, '0');
+  }
+}
+function toggleSidebar() {
+  const s = $('#sidebar');
+  if (!s) return;
+  if (s.classList.contains('collapsed')) {
+    expandSidebar();
+  } else {
+    collapseSidebar();
+  }
+}
+function initSidebarCollapse() {
+  const sidebar = $('#sidebar');
+  if (!sidebar) return;
+  if (localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1') sidebar.classList.add('collapsed');
+  if (!$('#sidebar-toggle')) {
+    const btn = document.createElement('button');
+    btn.id = 'sidebar-toggle';
+    btn.className = 'sidebar-toggle';
+    btn.setAttribute('aria-label', 'Restringi/Espandi barra');
+    btn.innerHTML = `<span class="icon sidebar-toggle-icon" style="width:20px;height:20px">${icons.chevronLeft}</span>`;
+    btn.onclick = () => {
+      toggleSidebar();
+      btn.title = isSidebarCollapsed() ? 'Espandi barra' : 'Restringi barra';
+    };
+    sidebar.appendChild(btn);
+  }
+  const tb = $('#sidebar-toggle');
+  if (tb) tb.title = isSidebarCollapsed() ? 'Espandi barra' : 'Restringi barra';
+  const nav = $('#main-nav');
+  if (nav && !nav.dataset.collapseInit) {
+    nav.dataset.collapseInit = '1';
+    nav.addEventListener('click', (e) => {
+      const a = e.target.closest('a[href^="/"]');
+      if (a && isSidebarCollapsed()) {
+        e.preventDefault();
+        expandSidebar();
+        window.location.href = a.getAttribute('href');
+      }
+    });
+  }
+}
+
 // Load company logo
 async function loadCompanyLogo() {
   try {
@@ -247,6 +307,8 @@ function renderNav(active, hasNotifications = false) {
   const userName = $('#user-name'), userRole = $('#user-role');
   if (userName) userName.textContent = user.name;
   if (userRole) userRole.textContent = user.role === 'admin' ? 'Amministratore' : user.role === 'manager' ? 'Responsabile' : 'Dipendente';
+
+  initSidebarCollapse();
 }
 
 // Check avvisi count for nav dot
