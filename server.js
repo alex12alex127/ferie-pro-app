@@ -7,363 +7,266 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
+
+// CONFIGURAZIONE CRITICA PER VPS (Non modificare)
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'ferie-secret-key-change-in-production';
 
+// Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Aumentato limite per upload immagini
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'], index: 'index.html' }));
 
-// Database
+// Inizializzazione Database
 const dataDir = path.join(__dirname, 'data');
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
-const db = new Database(path.join(dataDir, 'ferie.db'));
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+const db = new Database(path.join(dataDir, 'ferie.db')); // Rimosso verbose per alleggerire i log in produzione
 
-// Tables
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    role TEXT DEFAULT 'employee',
-    phone TEXT DEFAULT '',
-    department TEXT DEFAULT '',
-    total_days INTEGER DEFAULT 26,
-    used_days INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-  
-  CREATE TABLE IF NOT EXISTS requests (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    nome TEXT NOT NULL,
-    email TEXT NOT NULL,
-    reparto TEXT,
-    responsabile TEXT,
-    inizio TEXT NOT NULL,
-    fine TEXT NOT NULL,
-    giorni INTEGER DEFAULT 1,
-    tipo TEXT DEFAULT 'Ferie',
-    urgenza TEXT DEFAULT 'Normale',
-    motivo TEXT,
-    stato TEXT DEFAULT 'In attesa',
-    approved_by INTEGER,
-    approved_at TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
+// Funzione Helper per inizializzare le tabelle
+function initDb() {
+  const schema = `
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      role TEXT DEFAULT 'employee',
+      phone TEXT DEFAULT '',
+      department TEXT DEFAULT '',
+      total_days INTEGER DEFAULT 26,
+      used_days INTEGER DEFAULT 0,
+      sede_id INTEGER DEFAULT NULL,
+      avatar TEXT DEFAULT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      nome TEXT NOT NULL,
+      email TEXT NOT NULL,
+      reparto TEXT,
+      responsabile TEXT,
+      inizio TEXT NOT NULL,
+      fine TEXT NOT NULL,
+      giorni INTEGER DEFAULT 1,
+      tipo TEXT DEFAULT 'Ferie',
+      urgenza TEXT DEFAULT 'Normale',
+      motivo TEXT,
+      stato TEXT DEFAULT 'In attesa',
+      approved_by INTEGER,
+      approved_at TEXT,
+      codice_malattia TEXT DEFAULT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      message TEXT NOT NULL,
+      read INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS cantieri (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT NOT NULL,
+      cliente TEXT NOT NULL,
+      indirizzo TEXT,
+      stato TEXT DEFAULT 'Attivo',
+      data_inizio TEXT,
+      data_fine TEXT,
+      note TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS cantieri_assegnazioni (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      cantiere_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      ruolo TEXT DEFAULT 'Tecnico',
+      UNIQUE(cantiere_id, user_id)
+    );
+    CREATE TABLE IF NOT EXISTS avvisi (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      titolo TEXT NOT NULL,
+      messaggio TEXT NOT NULL,
+      priorita TEXT DEFAULT 'Normale',
+      attivo INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS sedi (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT UNIQUE NOT NULL,
+      indirizzo TEXT,
+      attiva INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS dpi_catalogo (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT NOT NULL,
+      categoria TEXT NOT NULL,
+      descrizione TEXT,
+      taglia_disponibili TEXT,
+      codice_barre TEXT DEFAULT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS dpi_assegnazioni (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      dpi_id INTEGER NOT NULL,
+      taglia TEXT,
+      quantita INTEGER DEFAULT 1,
+      data_consegna DATE NOT NULL,
+      data_scadenza DATE,
+      note TEXT,
+      stato TEXT DEFAULT 'attivo',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (dpi_id) REFERENCES dpi_catalogo(id)
+    );
+  `;
+  db.exec(schema);
 
-  CREATE TABLE IF NOT EXISTS notifications (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    message TEXT NOT NULL,
-    read INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
+  // Dati di default
+  try {
+    const dpiCount = db.prepare('SELECT COUNT(*) as c FROM dpi_catalogo').get();
+    if (dpiCount.c === 0) {
+      const defaultDpi = [
+        ['Casco protettivo', 'Protezione testa', 'Casco di sicurezza EN 397', 'Unica'],
+        ['Guanti da lavoro', 'Protezione mani', 'Guanti antitaglio', 'S,M,L,XL'],
+        ['Scarpe antinfortunistiche', 'Protezione piedi', 'Scarpe S3', '38-46']
+      ];
+      const insertDpi = db.prepare('INSERT INTO dpi_catalogo (nome, categoria, descrizione, taglia_disponibili) VALUES (?, ?, ?, ?)');
+      defaultDpi.forEach(d => insertDpi.run(...d));
+    }
 
-  CREATE TABLE IF NOT EXISTS cantieri (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nome TEXT NOT NULL,
-    cliente TEXT NOT NULL,
-    indirizzo TEXT,
-    stato TEXT DEFAULT 'Attivo',
-    data_inizio TEXT,
-    data_fine TEXT,
-    note TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
+    const sediCount = db.prepare('SELECT COUNT(*) as c FROM sedi').get();
+    if (sediCount.c === 0) {
+      ['Ferrara', 'Ravenna'].forEach(s => db.prepare('INSERT INTO sedi (nome) VALUES (?)').run(s));
+    }
 
-  CREATE TABLE IF NOT EXISTS cantieri_assegnazioni (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    cantiere_id INTEGER NOT NULL,
-    user_id INTEGER NOT NULL,
-    ruolo TEXT DEFAULT 'Tecnico',
-    UNIQUE(cantiere_id, user_id)
-  );
-
-  CREATE TABLE IF NOT EXISTS rapportini (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    cantiere_id INTEGER NOT NULL,
-    data TEXT NOT NULL,
-    ore REAL NOT NULL,
-    descrizione TEXT,
-    materiali TEXT,
-    problemi TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS timbrature (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    cantiere_id INTEGER,
-    tipo TEXT NOT NULL,
-    data TEXT NOT NULL,
-    ora TEXT NOT NULL,
-    note TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS scadenze (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    tipo TEXT NOT NULL,
-    descrizione TEXT NOT NULL,
-    data_scadenza TEXT NOT NULL,
-    stato TEXT DEFAULT 'Attiva',
-    notificato INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS attrezzature (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nome TEXT NOT NULL,
-    codice TEXT UNIQUE,
-    categoria TEXT,
-    stato TEXT DEFAULT 'Disponibile',
-    assegnato_a INTEGER,
-    cantiere_id INTEGER,
-    note TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS veicoli (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    targa TEXT UNIQUE NOT NULL,
-    modello TEXT NOT NULL,
-    assegnato_a INTEGER,
-    km_attuali INTEGER DEFAULT 0,
-    scadenza_bollo TEXT,
-    scadenza_assicurazione TEXT,
-    scadenza_revisione TEXT,
-    note TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS richieste_materiale (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    cantiere_id INTEGER,
-    materiale TEXT NOT NULL,
-    quantita TEXT,
-    urgenza TEXT DEFAULT 'Normale',
-    stato TEXT DEFAULT 'In attesa',
-    note TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS documenti (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nome TEXT NOT NULL,
-    tipo TEXT,
-    cantiere_id INTEGER,
-    url TEXT,
-    note TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS avvisi (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    titolo TEXT NOT NULL,
-    messaggio TEXT NOT NULL,
-    priorita TEXT DEFAULT 'Normale',
-    attivo INTEGER DEFAULT 1,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS sedi (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nome TEXT UNIQUE NOT NULL,
-    indirizzo TEXT,
-    attiva INTEGER DEFAULT 1,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-  
-  CREATE TABLE IF NOT EXISTS dpi_catalogo (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nome TEXT NOT NULL,
-    categoria TEXT NOT NULL,
-    descrizione TEXT,
-    taglia_disponibili TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-  
-  CREATE TABLE IF NOT EXISTS dpi_assegnazioni (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    dpi_id INTEGER NOT NULL,
-    taglia TEXT,
-    quantita INTEGER DEFAULT 1,
-    data_consegna DATE NOT NULL,
-    data_scadenza DATE,
-    note TEXT,
-    stato TEXT DEFAULT 'attivo',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (dpi_id) REFERENCES dpi_catalogo(id)
-  );
-`);
-
-// Insert default DPI categories if empty
-const dpiCount = db.prepare('SELECT COUNT(*) as c FROM dpi_catalogo').get();
-if (dpiCount.c === 0) {
-  const defaultDpi = [
-    ['Casco protettivo', 'Protezione testa', 'Casco di sicurezza EN 397', 'Unica'],
-    ['Guanti da lavoro', 'Protezione mani', 'Guanti antitaglio', 'S,M,L,XL'],
-    ['Scarpe antinfortunistiche', 'Protezione piedi', 'Scarpe S3 con puntale', '38,39,40,41,42,43,44,45,46'],
-    ['Occhiali protettivi', 'Protezione occhi', 'Occhiali EN 166', 'Unica'],
-    ['Gilet alta visibilità', 'Visibilità', 'Gilet rifrangente classe 2', 'S,M,L,XL,XXL'],
-    ['Cuffie antirumore', 'Protezione udito', 'Cuffie EN 352-1', 'Unica'],
-    ['Mascherina FFP2', 'Protezione vie respiratorie', 'Mascherina filtrante', 'Unica'],
-    ['Imbracatura anticaduta', 'Protezione anticaduta', 'Imbracatura EN 361', 'S/M,L/XL']
-  ];
-  const insertDpi = db.prepare('INSERT INTO dpi_catalogo (nome, categoria, descrizione, taglia_disponibili) VALUES (?, ?, ?, ?)');
-  defaultDpi.forEach(d => insertDpi.run(...d));
+    const userCount = db.prepare('SELECT COUNT(*) as c FROM users').get();
+    if (userCount.c === 0) {
+      const defaultUsers = [
+        { u: 'admin', p: 'admin123', n: 'Amministratore', e: 'admin@azienda.it', r: 'admin' },
+        { u: 'manager', p: 'manager123', n: 'Responsabile', e: 'manager@azienda.it', r: 'manager' },
+        { u: 'tecnico', p: 'tec123', n: 'Mario Rossi', e: 'mario@azienda.it', r: 'employee' },
+      ];
+      const insertUser = db.prepare('INSERT INTO users (username, password, name, email, role) VALUES (?, ?, ?, ?, ?)');
+      defaultUsers.forEach(user => insertUser.run(user.u, bcrypt.hashSync(user.p, 10), user.n, user.e, user.r));
+      console.log('Database inizializzato con utenti di default.');
+    }
+  } catch (err) {
+    console.error("Errore inizializzazione dati:", err.message);
+  }
 }
 
-// Add codice_barre column to dpi_catalogo if not exists
-try { db.exec('ALTER TABLE dpi_catalogo ADD COLUMN codice_barre TEXT DEFAULT NULL'); } catch {}
+// Avvio Inizializzazione DB
+initDb();
 
-// Add storico_modifiche table for DPI changes
-db.exec(`
-  CREATE TABLE IF NOT EXISTS dpi_storico (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    dpi_id INTEGER NOT NULL,
-    user_id INTEGER NOT NULL,
-    azione TEXT NOT NULL,
-    dettagli TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (dpi_id) REFERENCES dpi_catalogo(id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  );
-`);
+// --- Helpers ---
+const notify = (userId, message) => {
+  try { db.prepare('INSERT INTO notifications (user_id, message) VALUES (?, ?)').run(userId, message); } 
+  catch (e) { console.error('Notify Error:', e); }
+};
 
-// Add sede_id column to users if not exists
-try { db.exec('ALTER TABLE users ADD COLUMN sede_id INTEGER DEFAULT NULL'); } catch {}
-
-// Add codice_malattia column to requests if not exists
-try { db.exec('ALTER TABLE requests ADD COLUMN codice_malattia TEXT DEFAULT NULL'); } catch {}
-
-// Add avatar column to users if not exists
-try { db.exec('ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT NULL'); } catch {}
-
-// Default sedi
-const defaultSedi = ['Ferrara', 'Ravenna'];
-const insertSede = db.prepare('INSERT OR IGNORE INTO sedi (nome) VALUES (?)');
-defaultSedi.forEach(s => insertSede.run(s));
-
-// Default users
-const defaultUsers = [
-  { username: 'admin', password: 'admin123', name: 'Amministratore', email: 'admin@azienda.it', role: 'admin' },
-  { username: 'manager', password: 'manager123', name: 'Responsabile', email: 'manager@azienda.it', role: 'manager' },
-  { username: 'tecnico', password: 'tec123', name: 'Mario Rossi', email: 'mario@azienda.it', role: 'employee' },
-];
-const insertUser = db.prepare('INSERT OR IGNORE INTO users (username, password, name, email, role) VALUES (?, ?, ?, ?, ?)');
-defaultUsers.forEach(u => insertUser.run(u.username, bcrypt.hashSync(u.password, 10), u.name, u.email, u.role));
-
-// Helpers
 const calcDays = (start, end) => {
   let count = 0, cur = new Date(start);
-  while (cur <= new Date(end)) { if (cur.getDay() % 6 !== 0) count++; cur.setDate(cur.getDate() + 1); }
+  const finish = new Date(end);
+  while (cur <= finish) { if (cur.getDay() % 6 !== 0) count++; cur.setDate(cur.getDate() + 1); }
   return count || 1;
 };
 
-const notify = (userId, message) => db.prepare('INSERT INTO notifications (user_id, message) VALUES (?, ?)').run(userId, message);
-
-// Auth middleware
+// --- Auth Middleware ---
 const auth = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Token mancante' });
   try { req.user = jwt.verify(token, JWT_SECRET); next(); }
-  catch { res.status(401).json({ error: 'Token non valido' }); }
+  catch { res.status(401).json({ error: 'Token non valido o scaduto' }); }
 };
 const isAdmin = (req, res, next) => req.user.role === 'admin' ? next() : res.status(403).json({ error: 'Accesso negato' });
 const isManager = (req, res, next) => ['admin', 'manager'].includes(req.user.role) ? next() : res.status(403).json({ error: 'Accesso negato' });
 
-// AUTH
+// --- ROUTES ---
+
+// Auth
 app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
-  const user = db.prepare('SELECT u.*, s.nome as sede_nome FROM users u LEFT JOIN sedi s ON u.sede_id = s.id WHERE u.username = ?').get(username);
-  if (!user || !bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: 'Credenziali non valide' });
-  const token = jwt.sign({ id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, sede_id: user.sede_id }, JWT_SECRET, { expiresIn: '8h' });
-  res.json({ token, user: { id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, total_days: user.total_days, used_days: user.used_days, sede_id: user.sede_id, sede_nome: user.sede_nome } });
+  try {
+    const { username, password } = req.body;
+    const user = db.prepare('SELECT u.*, s.nome as sede_nome FROM users u LEFT JOIN sedi s ON u.sede_id = s.id WHERE u.username = ?').get(username);
+    if (!user || !bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: 'Credenziali non valide' });
+    
+    const token = jwt.sign({ id: user.id, username: user.username, role: user.role, sede_id: user.sede_id }, JWT_SECRET, { expiresIn: '12h' });
+    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, sede_nome: user.sede_nome, avatar: user.avatar } });
+  } catch (e) { res.status(500).json({ error: 'Errore server' }); }
 });
 
 app.post('/api/register', (req, res) => {
-  const { username, password, name, email, sede_id } = req.body;
-  if (!username || !password || !name || !email || !sede_id) return res.status(400).json({ error: 'Tutti i campi sono obbligatori, inclusa la sede' });
-  if (username.length < 3 || password.length < 6) return res.status(400).json({ error: 'Username min 3, password min 6 caratteri' });
   try {
+    const { username, password, name, email, sede_id } = req.body;
+    if (!username || !password || !name || !sede_id) return res.status(400).json({ error: 'Dati incompleti' });
+    
     const result = db.prepare('INSERT INTO users (username, password, name, email, role, sede_id) VALUES (?, ?, ?, ?, ?, ?)').run(username, bcrypt.hashSync(password, 10), name, email, 'employee', sede_id);
-    const user = db.prepare('SELECT u.*, s.nome as sede_nome FROM users u LEFT JOIN sedi s ON u.sede_id = s.id WHERE u.id = ?').get(result.lastInsertRowid);
-    const token = jwt.sign({ id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, sede_id: user.sede_id }, JWT_SECRET, { expiresIn: '8h' });
-    res.json({ token, user: { id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, total_days: user.total_days, used_days: user.used_days, sede_id: user.sede_id, sede_nome: user.sede_nome } });
-  } catch { res.status(400).json({ error: 'Username o email già in uso' }); }
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+    const token = jwt.sign({ id: user.id, username: user.username, role: user.role, sede_id: user.sede_id }, JWT_SECRET, { expiresIn: '12h' });
+    res.json({ token, user: { id: user.id, name: user.name, role: user.role } });
+  } catch (e) { res.status(400).json({ error: 'Username o email già in uso' }); }
 });
 
-// SEDI
-app.get('/api/sedi', (req, res) => res.json(db.prepare('SELECT * FROM sedi WHERE attiva = 1 ORDER BY nome').all()));
-app.post('/api/sedi', auth, isAdmin, (req, res) => {
-  const { nome, indirizzo } = req.body;
-  if (!nome) return res.status(400).json({ error: 'Nome obbligatorio' });
-  try { db.prepare('INSERT INTO sedi (nome, indirizzo) VALUES (?,?)').run(nome, indirizzo || ''); res.json({ message: 'OK' }); }
-  catch { res.status(400).json({ error: 'Sede già esistente' }); }
-});
-app.delete('/api/sedi/:id', auth, isAdmin, (req, res) => {
-  const users = db.prepare('SELECT COUNT(*) as c FROM users WHERE sede_id = ?').get(req.params.id);
-  if (users.c > 0) return res.status(400).json({ error: 'Impossibile eliminare: ci sono dipendenti assegnati' });
-  db.prepare('UPDATE sedi SET attiva = 0 WHERE id = ?').run(req.params.id);
-  res.json({ message: 'OK' });
+// Profile
+app.get('/api/profile', auth, (req, res) => {
+  const user = db.prepare('SELECT u.id, u.username, u.name, u.email, u.role, u.phone, u.department, u.total_days, u.used_days, u.sede_id, u.avatar, s.nome as sede_nome FROM users u LEFT JOIN sedi s ON u.sede_id = s.id WHERE u.id = ?').get(req.user.id);
+  res.json(user);
 });
 
-// PROFILE
-app.get('/api/profile', auth, (req, res) => res.json(db.prepare('SELECT u.id, u.username, u.name, u.email, u.role, u.phone, u.department, u.total_days, u.used_days, u.sede_id, u.avatar, s.nome as sede_nome FROM users u LEFT JOIN sedi s ON u.sede_id = s.id WHERE u.id = ?').get(req.user.id)));
 app.patch('/api/profile', auth, (req, res) => {
   const { name, phone, department, avatar } = req.body;
-  if (avatar !== undefined) {
-    db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(avatar, req.user.id);
-  }
+  if (avatar) db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(avatar, req.user.id);
   db.prepare('UPDATE users SET name=COALESCE(?,name), phone=COALESCE(?,phone), department=COALESCE(?,department) WHERE id=?').run(name, phone, department, req.user.id);
-  res.json({ message: 'OK' });
+  res.json({ message: 'Profilo aggiornato' });
 });
+
 app.post('/api/change-password', auth, (req, res) => {
   const { oldPassword, newPassword } = req.body;
   const user = db.prepare('SELECT password FROM users WHERE id = ?').get(req.user.id);
-  if (!bcrypt.compareSync(oldPassword, user.password)) return res.status(400).json({ error: 'Password errata' });
+  if (!bcrypt.compareSync(oldPassword, user.password)) return res.status(400).json({ error: 'Password attuale errata' });
   db.prepare('UPDATE users SET password = ? WHERE id = ?').run(bcrypt.hashSync(newPassword, 10), req.user.id);
-  res.json({ message: 'OK' });
+  res.json({ message: 'Password modificata' });
 });
 
-// NOTIFICATIONS
-app.get('/api/notifications', auth, (req, res) => res.json(db.prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 20').all(req.user.id)));
-app.post('/api/notifications/read', auth, (req, res) => { db.prepare('UPDATE notifications SET read = 1 WHERE user_id = ?').run(req.user.id); res.json({ message: 'OK' }); });
-
-// REQUESTS (Ferie)
+// Requests
 app.get('/api/requests', auth, (req, res) => {
-  const sql = req.user.role === 'employee' ? 'SELECT * FROM requests WHERE user_id = ? ORDER BY created_at DESC' : 'SELECT * FROM requests ORDER BY created_at DESC';
-  res.json(req.user.role === 'employee' ? db.prepare(sql).all(req.user.id) : db.prepare(sql).all());
+  const sql = req.user.role === 'employee' 
+    ? 'SELECT * FROM requests WHERE user_id = ? ORDER BY created_at DESC' 
+    : 'SELECT * FROM requests ORDER BY created_at DESC';
+  res.json(db.prepare(sql).all(req.user.role === 'employee' ? req.user.id : undefined));
 });
+
 app.post('/api/requests', auth, (req, res) => {
   const { nome, email, inizio, fine, tipo, urgenza, motivo, codice_malattia } = req.body;
-  if (!inizio || !fine) return res.status(400).json({ error: 'Date obbligatorie' });
-  if (tipo === 'Malattia' && !codice_malattia) return res.status(400).json({ error: 'Numero di protocollo obbligatorio' });
   const giorni = calcDays(inizio, fine);
-  db.prepare('INSERT INTO requests (user_id, nome, email, inizio, fine, giorni, tipo, urgenza, motivo, codice_malattia) VALUES (?,?,?,?,?,?,?,?,?,?)').run(req.user.id, nome, email, inizio, fine, giorni, tipo, urgenza, motivo, codice_malattia || null);
-  res.json({ message: 'OK', giorni });
+  db.prepare('INSERT INTO requests (user_id, nome, email, inizio, fine, giorni, tipo, urgenza, motivo, codice_malattia) VALUES (?,?,?,?,?,?,?,?,?,?)')
+    .run(req.user.id, nome, email, inizio, fine, giorni, tipo, urgenza, motivo, codice_malattia || null);
+  res.json({ message: 'Richiesta inviata' });
 });
+
 app.patch('/api/requests/:id/status', auth, isManager, (req, res) => {
   const { stato } = req.body;
   const r = db.prepare('SELECT * FROM requests WHERE id = ?').get(req.params.id);
-  if (!r) return res.status(404).json({ error: 'Non trovata' });
+  if (!r) return res.status(404).json({ error: 'Richiesta non trovata' });
+  
   db.prepare('UPDATE requests SET stato=?, approved_by=?, approved_at=? WHERE id=?').run(stato, req.user.id, new Date().toISOString(), req.params.id);
-  if (stato === 'Approvata' && r.tipo === 'Ferie') db.prepare('UPDATE users SET used_days = used_days + ? WHERE id = ?').run(r.giorni, r.user_id);
-  notify(r.user_id, `Richiesta ${r.inizio} - ${r.fine}: ${stato}`);
-  res.json({ message: 'OK' });
+  if (stato === 'Approvata' && r.tipo === 'Ferie') {
+    db.prepare('UPDATE users SET used_days = used_days + ? WHERE id = ?').run(r.giorni, r.user_id);
+  }
+  notify(r.user_id, `La tua richiesta per ${r.inizio} è stata: ${stato}`);
+  res.json({ message: 'Stato aggiornato' });
 });
-app.delete('/api/requests/:id', auth, isAdmin, (req, res) => { db.prepare('DELETE FROM requests WHERE id = ?').run(req.params.id); res.json({ message: 'OK' }); });
 
-// STATS
+app.delete('/api/requests/:id', auth, isAdmin, (req, res) => {
+  db.prepare('DELETE FROM requests WHERE id = ?').run(req.params.id);
+  res.json({ message: 'Eliminata' });
+});
+
+// Stats & Dashboard Data
 app.get('/api/stats', auth, isManager, (req, res) => {
   res.json({
     total: db.prepare('SELECT COUNT(*) as c FROM requests').get().c,
@@ -374,562 +277,138 @@ app.get('/api/stats', auth, isManager, (req, res) => {
   });
 });
 
-// USERS
-app.get('/api/users', auth, (req, res) => {
-  // Admin/Manager vedono tutti, employee vede solo quelli della sua sede
-  if (['admin', 'manager'].includes(req.user.role)) {
-    res.json(db.prepare('SELECT u.id, u.username, u.name, u.email, u.role, u.phone, u.department, u.total_days, u.used_days, u.sede_id, s.nome as sede_nome FROM users u LEFT JOIN sedi s ON u.sede_id = s.id ORDER BY s.nome, u.name').all());
-  } else {
-    res.json(db.prepare('SELECT u.id, u.username, u.name, u.email, u.role, u.phone, u.department, u.total_days, u.used_days, u.sede_id, s.nome as sede_nome FROM users u LEFT JOIN sedi s ON u.sede_id = s.id WHERE u.sede_id = ? ORDER BY u.name').all(req.user.sede_id));
-  }
+app.get('/api/avvisi', auth, (req, res) => res.json(db.prepare('SELECT * FROM avvisi WHERE attivo = 1 ORDER BY created_at DESC').all()));
+app.post('/api/avvisi', auth, isManager, (req, res) => {
+  const { titolo, messaggio, priorita } = req.body;
+  db.prepare('INSERT INTO avvisi (titolo, messaggio, priorita) VALUES (?,?,?)').run(titolo, messaggio, priorita || 'Normale');
+  res.json({ message: 'Avviso pubblicato' });
 });
-app.post('/api/users', auth, isAdmin, (req, res) => {
-  const { username, password, name, email, role, total_days, sede_id } = req.body;
-  if (!username || !password || !name || !email) return res.status(400).json({ error: 'Campi obbligatori' });
-  try {
-    db.prepare('INSERT INTO users (username, password, name, email, role, total_days, sede_id) VALUES (?,?,?,?,?,?,?)').run(username, bcrypt.hashSync(password, 10), name, email, role || 'employee', total_days || 26, sede_id || null);
-    res.json({ message: 'OK' });
-  } catch { res.status(400).json({ error: 'Già esistente' }); }
-});
-app.patch('/api/users/:id', auth, isManager, (req, res) => {
-  const { name, email, role, total_days, used_days, sede_id, resetPassword } = req.body;
-  // Solo admin può cambiare ruolo
-  if (role && req.user.role !== 'admin') return res.status(403).json({ error: 'Solo admin può cambiare ruolo' });
-  if (resetPassword) db.prepare('UPDATE users SET password = ? WHERE id = ?').run(bcrypt.hashSync(resetPassword, 10), req.params.id);
-  db.prepare('UPDATE users SET name=COALESCE(?,name), email=COALESCE(?,email), role=COALESCE(?,role), total_days=COALESCE(?,total_days), used_days=COALESCE(?,used_days), sede_id=COALESCE(?,sede_id) WHERE id=?').run(name, email, role, total_days, used_days, sede_id, req.params.id);
-  res.json({ message: 'OK' });
-});
-app.delete('/api/users/:id', auth, isAdmin, (req, res) => {
-  if (req.params.id == req.user.id) return res.status(400).json({ error: 'Non puoi eliminare te stesso' });
-  db.prepare('DELETE FROM users WHERE id = ?').run(req.params.id);
-  res.json({ message: 'OK' });
+app.delete('/api/avvisi/:id', auth, isManager, (req, res) => {
+  db.prepare('UPDATE avvisi SET attivo = 0 WHERE id = ?').run(req.params.id);
+  res.json({ message: 'Avviso rimosso' });
 });
 
-// CANTIERI
+// Users & Sedi
+app.get('/api/sedi', (req, res) => res.json(db.prepare('SELECT * FROM sedi WHERE attiva = 1 ORDER BY nome').all()));
+app.post('/api/sedi', auth, isAdmin, (req, res) => {
+  try { db.prepare('INSERT INTO sedi (nome, indirizzo) VALUES (?,?)').run(req.body.nome, req.body.indirizzo || ''); res.json({ message: 'Sede creata' }); }
+  catch { res.status(400).json({ error: 'Sede già esistente' }); }
+});
+app.delete('/api/sedi/:id', auth, isAdmin, (req, res) => {
+  if (db.prepare('SELECT COUNT(*) as c FROM users WHERE sede_id = ?').get(req.params.id).c > 0) return res.status(400).json({ error: 'Sede in uso' });
+  db.prepare('UPDATE sedi SET attiva = 0 WHERE id = ?').run(req.params.id);
+  res.json({ message: 'Sede eliminata' });
+});
+
+app.get('/api/users', auth, (req, res) => {
+  const sql = ['admin', 'manager'].includes(req.user.role) 
+    ? 'SELECT u.id, u.username, u.name, u.email, u.role, u.total_days, u.used_days, u.sede_id, s.nome as sede_nome FROM users u LEFT JOIN sedi s ON u.sede_id = s.id ORDER BY s.nome, u.name'
+    : 'SELECT u.id, u.username, u.name, u.email, u.role, u.total_days, u.used_days, u.sede_id, s.nome as sede_nome FROM users u LEFT JOIN sedi s ON u.sede_id = s.id WHERE u.sede_id = ? ORDER BY u.name';
+  res.json(db.prepare(sql).all(req.user.role === 'employee' ? req.user.sede_id : undefined));
+});
+
+app.post('/api/users', auth, isAdmin, (req, res) => {
+  try {
+    const { username, password, name, email, role, total_days, sede_id } = req.body;
+    db.prepare('INSERT INTO users (username, password, name, email, role, total_days, sede_id) VALUES (?,?,?,?,?,?,?)')
+      .run(username, bcrypt.hashSync(password, 10), name, email, role || 'employee', total_days || 26, sede_id);
+    res.json({ message: 'Utente creato' });
+  } catch { res.status(400).json({ error: 'Errore creazione utente' }); }
+});
+
+app.delete('/api/users/:id', auth, isAdmin, (req, res) => {
+  if (req.params.id == req.user.id) return res.status(400).json({ error: 'Non eliminare te stesso' });
+  db.prepare('DELETE FROM users WHERE id = ?').run(req.params.id);
+  res.json({ message: 'Utente eliminato' });
+});
+
+// Cantieri
 app.get('/api/cantieri', auth, (req, res) => {
   const cantieri = db.prepare('SELECT * FROM cantieri ORDER BY created_at DESC').all();
-  cantieri.forEach(c => {
-    c.tecnici = db.prepare('SELECT u.id, u.name FROM cantieri_assegnazioni ca JOIN users u ON ca.user_id = u.id WHERE ca.cantiere_id = ?').all(c.id);
-  });
+  cantieri.forEach(c => c.tecnici = db.prepare('SELECT u.id, u.name FROM cantieri_assegnazioni ca JOIN users u ON ca.user_id = u.id WHERE ca.cantiere_id = ?').all(c.id));
   res.json(cantieri);
 });
 app.post('/api/cantieri', auth, isManager, (req, res) => {
   const { nome, cliente, indirizzo, data_inizio, data_fine, note } = req.body;
-  if (!nome || !cliente) return res.status(400).json({ error: 'Nome e cliente obbligatori' });
   const r = db.prepare('INSERT INTO cantieri (nome, cliente, indirizzo, data_inizio, data_fine, note) VALUES (?,?,?,?,?,?)').run(nome, cliente, indirizzo, data_inizio, data_fine, note);
-  res.json({ id: r.lastInsertRowid, message: 'OK' });
+  res.json({ id: r.lastInsertRowid, message: 'Cantiere creato' });
 });
 app.patch('/api/cantieri/:id', auth, isManager, (req, res) => {
   const { nome, cliente, indirizzo, stato, data_inizio, data_fine, note } = req.body;
   db.prepare('UPDATE cantieri SET nome=COALESCE(?,nome), cliente=COALESCE(?,cliente), indirizzo=COALESCE(?,indirizzo), stato=COALESCE(?,stato), data_inizio=COALESCE(?,data_inizio), data_fine=COALESCE(?,data_fine), note=COALESCE(?,note) WHERE id=?').run(nome, cliente, indirizzo, stato, data_inizio, data_fine, note, req.params.id);
-  res.json({ message: 'OK' });
+  res.json({ message: 'Cantiere aggiornato' });
 });
-app.delete('/api/cantieri/:id', auth, isAdmin, (req, res) => { db.prepare('DELETE FROM cantieri WHERE id = ?').run(req.params.id); res.json({ message: 'OK' }); });
 app.post('/api/cantieri/:id/assegna', auth, isManager, (req, res) => {
-  const { user_id } = req.body;
-  try { db.prepare('INSERT INTO cantieri_assegnazioni (cantiere_id, user_id) VALUES (?,?)').run(req.params.id, user_id); res.json({ message: 'OK' }); }
+  try { db.prepare('INSERT INTO cantieri_assegnazioni (cantiere_id, user_id) VALUES (?,?)').run(req.params.id, req.body.user_id); res.json({ message: 'Tecnico assegnato' }); } 
   catch { res.status(400).json({ error: 'Già assegnato' }); }
 });
 app.delete('/api/cantieri/:id/assegna/:userId', auth, isManager, (req, res) => {
   db.prepare('DELETE FROM cantieri_assegnazioni WHERE cantiere_id = ? AND user_id = ?').run(req.params.id, req.params.userId);
-  res.json({ message: 'OK' });
+  res.json({ message: 'Assegnazione rimossa' });
 });
 
-// RAPPORTINI
-app.get('/api/rapportini', auth, (req, res) => {
-  const sql = req.user.role === 'employee'
-    ? 'SELECT r.*, c.nome as cantiere_nome, u.name as user_name FROM rapportini r LEFT JOIN cantieri c ON r.cantiere_id = c.id LEFT JOIN users u ON r.user_id = u.id WHERE r.user_id = ? ORDER BY r.data DESC'
-    : 'SELECT r.*, c.nome as cantiere_nome, u.name as user_name FROM rapportini r LEFT JOIN cantieri c ON r.cantiere_id = c.id LEFT JOIN users u ON r.user_id = u.id ORDER BY r.data DESC';
-  res.json(req.user.role === 'employee' ? db.prepare(sql).all(req.user.id) : db.prepare(sql).all());
-});
-app.post('/api/rapportini', auth, (req, res) => {
-  const { cantiere_id, data, ore, descrizione, materiali, problemi } = req.body;
-  if (!cantiere_id || !data || !ore) return res.status(400).json({ error: 'Cantiere, data e ore obbligatori' });
-  db.prepare('INSERT INTO rapportini (user_id, cantiere_id, data, ore, descrizione, materiali, problemi) VALUES (?,?,?,?,?,?,?)').run(req.user.id, cantiere_id, data, ore, descrizione, materiali, problemi);
-  res.json({ message: 'OK' });
-});
-app.delete('/api/rapportini/:id', auth, isManager, (req, res) => { db.prepare('DELETE FROM rapportini WHERE id = ?').run(req.params.id); res.json({ message: 'OK' }); });
-
-// TIMBRATURE
-app.get('/api/timbrature', auth, (req, res) => {
-  const sql = req.user.role === 'employee'
-    ? 'SELECT t.*, c.nome as cantiere_nome, u.name as user_name FROM timbrature t LEFT JOIN cantieri c ON t.cantiere_id = c.id LEFT JOIN users u ON t.user_id = u.id WHERE t.user_id = ? ORDER BY t.data DESC, t.ora DESC'
-    : 'SELECT t.*, c.nome as cantiere_nome, u.name as user_name FROM timbrature t LEFT JOIN cantieri c ON t.cantiere_id = c.id LEFT JOIN users u ON t.user_id = u.id ORDER BY t.data DESC, t.ora DESC';
-  res.json(req.user.role === 'employee' ? db.prepare(sql).all(req.user.id) : db.prepare(sql).all());
-});
-app.post('/api/timbrature', auth, (req, res) => {
-  const { cantiere_id, tipo, note } = req.body;
-  const now = new Date();
-  const data = now.toISOString().slice(0, 10);
-  const ora = now.toTimeString().slice(0, 5);
-  db.prepare('INSERT INTO timbrature (user_id, cantiere_id, tipo, data, ora, note) VALUES (?,?,?,?,?,?)').run(req.user.id, cantiere_id, tipo, data, ora, note);
-  res.json({ message: 'OK', data, ora });
-});
-app.get('/api/timbrature/riepilogo', auth, (req, res) => {
-  const { mese } = req.query;
-  const userId = req.user.role === 'employee' ? req.user.id : null;
-  let sql = `SELECT user_id, data, SUM(CASE WHEN tipo='Entrata' THEN 1 ELSE 0 END) as entrate, SUM(CASE WHEN tipo='Uscita' THEN 1 ELSE 0 END) as uscite FROM timbrature WHERE data LIKE ?`;
-  if (userId) sql += ` AND user_id = ${userId}`;
-  sql += ' GROUP BY user_id, data';
-  res.json(db.prepare(sql).all(`${mese}%`));
+// DPI
+app.get('/api/dpi/catalogo', auth, (req, res) => res.json(db.prepare('SELECT * FROM dpi_catalogo ORDER BY categoria, nome').all()));
+app.get('/api/dpi/assegnazioni', auth, (req, res) => {
+  const sql = req.user.role === 'employee' 
+    ? `SELECT a.*, d.nome as dpi_nome, d.categoria, u.name as dipendente_nome FROM dpi_assegnazioni a JOIN dpi_catalogo d ON a.dpi_id = d.id JOIN users u ON a.user_id = u.id WHERE a.user_id = ? ORDER BY a.data_consegna DESC`
+    : `SELECT a.*, d.nome as dpi_nome, d.categoria, u.name as dipendente_nome FROM dpi_assegnazioni a JOIN dpi_catalogo d ON a.dpi_id = d.id JOIN users u ON a.user_id = u.id ORDER BY a.data_consegna DESC`;
+  res.json(db.prepare(sql).all(req.user.role === 'employee' ? req.user.id : undefined));
 });
 
-// SCADENZE
-app.get('/api/scadenze', auth, (req, res) => {
-  const sql = req.user.role === 'employee'
-    ? 'SELECT s.*, u.name as user_name FROM scadenze s LEFT JOIN users u ON s.user_id = u.id WHERE s.user_id = ? OR s.user_id IS NULL ORDER BY s.data_scadenza'
-    : 'SELECT s.*, u.name as user_name FROM scadenze s LEFT JOIN users u ON s.user_id = u.id ORDER BY s.data_scadenza';
-  res.json(req.user.role === 'employee' ? db.prepare(sql).all(req.user.id) : db.prepare(sql).all());
-});
-app.post('/api/scadenze', auth, isManager, (req, res) => {
-  const { user_id, tipo, descrizione, data_scadenza } = req.body;
-  if (!tipo || !descrizione || !data_scadenza) return res.status(400).json({ error: 'Campi obbligatori' });
-  db.prepare('INSERT INTO scadenze (user_id, tipo, descrizione, data_scadenza) VALUES (?,?,?,?)').run(user_id || null, tipo, descrizione, data_scadenza);
-  res.json({ message: 'OK' });
-});
-app.patch('/api/scadenze/:id', auth, isManager, (req, res) => {
-  const { stato, data_scadenza } = req.body;
-  db.prepare('UPDATE scadenze SET stato=COALESCE(?,stato), data_scadenza=COALESCE(?,data_scadenza) WHERE id=?').run(stato, data_scadenza, req.params.id);
-  res.json({ message: 'OK' });
-});
-app.delete('/api/scadenze/:id', auth, isAdmin, (req, res) => { db.prepare('DELETE FROM scadenze WHERE id = ?').run(req.params.id); res.json({ message: 'OK' }); });
-
-// ATTREZZATURE
-app.get('/api/attrezzature', auth, (req, res) => res.json(db.prepare('SELECT a.*, u.name as assegnato_nome, c.nome as cantiere_nome FROM attrezzature a LEFT JOIN users u ON a.assegnato_a = u.id LEFT JOIN cantieri c ON a.cantiere_id = c.id ORDER BY a.nome').all()));
-app.post('/api/attrezzature', auth, isManager, (req, res) => {
-  const { nome, codice, categoria, note } = req.body;
-  if (!nome) return res.status(400).json({ error: 'Nome obbligatorio' });
-  try {
-    db.prepare('INSERT INTO attrezzature (nome, codice, categoria, note) VALUES (?,?,?,?)').run(nome, codice, categoria, note);
-    res.json({ message: 'OK' });
-  } catch { res.status(400).json({ error: 'Codice già esistente' }); }
-});
-app.patch('/api/attrezzature/:id', auth, isManager, (req, res) => {
-  const { nome, stato, assegnato_a, cantiere_id, note } = req.body;
-  db.prepare('UPDATE attrezzature SET nome=COALESCE(?,nome), stato=COALESCE(?,stato), assegnato_a=?, cantiere_id=?, note=COALESCE(?,note) WHERE id=?').run(nome, stato, assegnato_a || null, cantiere_id || null, note, req.params.id);
-  res.json({ message: 'OK' });
-});
-app.delete('/api/attrezzature/:id', auth, isAdmin, (req, res) => { db.prepare('DELETE FROM attrezzature WHERE id = ?').run(req.params.id); res.json({ message: 'OK' }); });
-
-// VEICOLI
-app.get('/api/veicoli', auth, (req, res) => res.json(db.prepare('SELECT v.*, u.name as assegnato_nome FROM veicoli v LEFT JOIN users u ON v.assegnato_a = u.id ORDER BY v.targa').all()));
-app.post('/api/veicoli', auth, isAdmin, (req, res) => {
-  const { targa, modello, scadenza_bollo, scadenza_assicurazione, scadenza_revisione, note } = req.body;
-  if (!targa || !modello) return res.status(400).json({ error: 'Targa e modello obbligatori' });
-  try {
-    db.prepare('INSERT INTO veicoli (targa, modello, scadenza_bollo, scadenza_assicurazione, scadenza_revisione, note) VALUES (?,?,?,?,?,?)').run(targa, modello, scadenza_bollo, scadenza_assicurazione, scadenza_revisione, note);
-    res.json({ message: 'OK' });
-  } catch { res.status(400).json({ error: 'Targa già esistente' }); }
-});
-app.patch('/api/veicoli/:id', auth, isManager, (req, res) => {
-  const { assegnato_a, km_attuali, scadenza_bollo, scadenza_assicurazione, scadenza_revisione, note } = req.body;
-  db.prepare('UPDATE veicoli SET assegnato_a=?, km_attuali=COALESCE(?,km_attuali), scadenza_bollo=COALESCE(?,scadenza_bollo), scadenza_assicurazione=COALESCE(?,scadenza_assicurazione), scadenza_revisione=COALESCE(?,scadenza_revisione), note=COALESCE(?,note) WHERE id=?').run(assegnato_a || null, km_attuali, scadenza_bollo, scadenza_assicurazione, scadenza_revisione, note, req.params.id);
-  res.json({ message: 'OK' });
-});
-app.delete('/api/veicoli/:id', auth, isAdmin, (req, res) => { db.prepare('DELETE FROM veicoli WHERE id = ?').run(req.params.id); res.json({ message: 'OK' }); });
-
-// RICHIESTE MATERIALE
-app.get('/api/materiale', auth, (req, res) => {
-  const sql = req.user.role === 'employee'
-    ? 'SELECT m.*, c.nome as cantiere_nome, u.name as user_name FROM richieste_materiale m LEFT JOIN cantieri c ON m.cantiere_id = c.id LEFT JOIN users u ON m.user_id = u.id WHERE m.user_id = ? ORDER BY m.created_at DESC'
-    : 'SELECT m.*, c.nome as cantiere_nome, u.name as user_name FROM richieste_materiale m LEFT JOIN cantieri c ON m.cantiere_id = c.id LEFT JOIN users u ON m.user_id = u.id ORDER BY m.created_at DESC';
-  res.json(req.user.role === 'employee' ? db.prepare(sql).all(req.user.id) : db.prepare(sql).all());
-});
-app.post('/api/materiale', auth, (req, res) => {
-  const { cantiere_id, materiale, quantita, urgenza, note } = req.body;
-  if (!materiale) return res.status(400).json({ error: 'Materiale obbligatorio' });
-  db.prepare('INSERT INTO richieste_materiale (user_id, cantiere_id, materiale, quantita, urgenza, note) VALUES (?,?,?,?,?,?)').run(req.user.id, cantiere_id || null, materiale, quantita, urgenza, note);
-  res.json({ message: 'OK' });
-});
-app.patch('/api/materiale/:id/status', auth, isManager, (req, res) => {
-  const { stato } = req.body;
-  db.prepare('UPDATE richieste_materiale SET stato = ? WHERE id = ?').run(stato, req.params.id);
-  res.json({ message: 'OK' });
-});
-app.delete('/api/materiale/:id', auth, isManager, (req, res) => { db.prepare('DELETE FROM richieste_materiale WHERE id = ?').run(req.params.id); res.json({ message: 'OK' }); });
-
-// DOCUMENTI
-app.get('/api/documenti', auth, (req, res) => {
-  const { cantiere_id } = req.query;
-  let sql = 'SELECT d.*, c.nome as cantiere_nome FROM documenti d LEFT JOIN cantieri c ON d.cantiere_id = c.id';
-  if (cantiere_id) sql += ` WHERE d.cantiere_id = ${cantiere_id}`;
-  sql += ' ORDER BY d.created_at DESC';
-  res.json(db.prepare(sql).all());
-});
-app.post('/api/documenti', auth, isManager, (req, res) => {
-  const { nome, tipo, cantiere_id, url, note } = req.body;
-  if (!nome) return res.status(400).json({ error: 'Nome obbligatorio' });
-  db.prepare('INSERT INTO documenti (nome, tipo, cantiere_id, url, note) VALUES (?,?,?,?,?)').run(nome, tipo, cantiere_id || null, url, note);
-  res.json({ message: 'OK' });
-});
-app.delete('/api/documenti/:id', auth, isManager, (req, res) => { db.prepare('DELETE FROM documenti WHERE id = ?').run(req.params.id); res.json({ message: 'OK' }); });
-
-// AVVISI
-app.get('/api/avvisi', auth, (req, res) => res.json(db.prepare('SELECT * FROM avvisi WHERE attivo = 1 ORDER BY created_at DESC').all()));
-app.post('/api/avvisi', auth, isManager, (req, res) => {
-  const { titolo, messaggio, priorita } = req.body;
-  if (!titolo || !messaggio) return res.status(400).json({ error: 'Titolo e messaggio obbligatori' });
-  db.prepare('INSERT INTO avvisi (titolo, messaggio, priorita) VALUES (?,?,?)').run(titolo, messaggio, priorita || 'Normale');
-  res.json({ message: 'OK' });
-});
-app.delete('/api/avvisi/:id', auth, isManager, (req, res) => { db.prepare('UPDATE avvisi SET attivo = 0 WHERE id = ?').run(req.params.id); res.json({ message: 'OK' }); });
-
-// CALENDAR
+// Calendar
 app.get('/api/calendar', auth, (req, res) => {
   const { month, year } = req.query;
-  const start = `${year}-${String(month).padStart(2, '0')}-01`;
-  const end = `${year}-${String(month).padStart(2, '0')}-31`;
-  // Manager/Admin vedono tutte le ferie, dipendenti solo quelle della loro sede
-  if (['admin', 'manager'].includes(req.user.role)) {
-    res.json(db.prepare(`SELECT r.id, r.nome, r.inizio, r.fine, r.tipo FROM requests r WHERE r.stato = 'Approvata' AND ((r.inizio BETWEEN ? AND ?) OR (r.fine BETWEEN ? AND ?))`).all(start, end, start, end));
-  } else {
-    res.json(db.prepare(`SELECT r.id, r.nome, r.inizio, r.fine, r.tipo FROM requests r JOIN users u ON r.user_id = u.id WHERE r.stato = 'Approvata' AND u.sede_id = ? AND ((r.inizio BETWEEN ? AND ?) OR (r.fine BETWEEN ? AND ?))`).all(req.user.sede_id, start, end, start, end));
-  }
+  const start = `${year}-${String(month).padStart(2, '0')}-01`, end = `${year}-${String(month).padStart(2, '0')}-31`;
+  const sql = ['admin', 'manager'].includes(req.user.role)
+    ? `SELECT r.id, r.nome, r.inizio, r.fine, r.tipo FROM requests r WHERE r.stato = 'Approvata' AND ((r.inizio BETWEEN ? AND ?) OR (r.fine BETWEEN ? AND ?))`
+    : `SELECT r.id, r.nome, r.inizio, r.fine, r.tipo FROM requests r JOIN users u ON r.user_id = u.id WHERE r.stato = 'Approvata' AND u.sede_id = ? AND ((r.inizio BETWEEN ? AND ?) OR (r.fine BETWEEN ? AND ?))`;
+  res.json(db.prepare(sql).all(req.user.role === 'employee' ? req.user.sede_id : start, start, end, start, end));
 });
 
-// CALENDAR DAY DETAILS
 app.get('/api/calendar/day', auth, (req, res) => {
   const { date } = req.query;
-  if (!date) return res.status(400).json({ error: 'Data mancante' });
-  
-  // Manager/Admin vedono tutte le ferie, dipendenti solo quelle della loro sede
-  if (['admin', 'manager'].includes(req.user.role)) {
-    const requests = db.prepare(`
-      SELECT r.id, r.nome, r.email, r.inizio, r.fine, r.giorni, r.tipo, r.motivo, r.codice_malattia,
-             u.name as dipendente_nome, u.sede_id, s.nome as sede_nome
-      FROM requests r
-      JOIN users u ON r.user_id = u.id
-      LEFT JOIN sedi s ON u.sede_id = s.id
-      WHERE r.stato = 'Approvata' AND ? BETWEEN r.inizio AND r.fine
-      ORDER BY r.tipo, r.nome
-    `).all(date);
-    res.json(requests);
-  } else {
-    const requests = db.prepare(`
-      SELECT r.id, r.nome, r.email, r.inizio, r.fine, r.giorni, r.tipo, r.motivo, r.codice_malattia,
-             u.name as dipendente_nome, u.sede_id, s.nome as sede_nome
-      FROM requests r
-      JOIN users u ON r.user_id = u.id
-      LEFT JOIN sedi s ON u.sede_id = s.id
-      WHERE r.stato = 'Approvata' AND ? BETWEEN r.inizio AND r.fine AND u.sede_id = ?
-      ORDER BY r.tipo, r.nome
-    `).all(date, req.user.sede_id);
-    res.json(requests);
-  }
+  const sql = ['admin', 'manager'].includes(req.user.role)
+    ? `SELECT r.*, u.name as dipendente_nome FROM requests r JOIN users u ON r.user_id = u.id WHERE r.stato = 'Approvata' AND ? BETWEEN r.inizio AND r.fine`
+    : `SELECT r.*, u.name as dipendente_nome FROM requests r JOIN users u ON r.user_id = u.id WHERE r.stato = 'Approvata' AND ? BETWEEN r.inizio AND r.fine AND u.sede_id = ?`;
+  res.json(db.prepare(sql).all(date, req.user.role === 'employee' ? req.user.sede_id : undefined));
 });
 
-// EXPORT
-app.get('/api/export', auth, isManager, (req, res) => {
-  const { format, from, to, stato } = req.query;
-  let sql = 'SELECT * FROM requests WHERE 1=1';
-  const params = [];
-  if (from) { sql += ' AND inizio >= ?'; params.push(from); }
-  if (to) { sql += ' AND fine <= ?'; params.push(to); }
-  if (stato) { sql += ' AND stato = ?'; params.push(stato); }
-  const data = db.prepare(sql).all(...params);
-  if (format === 'csv') {
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename=export.csv');
-    res.send('ID,Nome,Email,Inizio,Fine,Giorni,Tipo,Stato\n' + data.map(r => `${r.id},"${r.nome}","${r.email}",${r.inizio},${r.fine},${r.giorni},"${r.tipo}","${r.stato}"`).join('\n'));
-  } else res.json(data);
-});
-
-// DPI CATALOGO
-app.get('/api/dpi/catalogo', auth, (req, res) => {
-  const dpi = db.prepare('SELECT * FROM dpi_catalogo ORDER BY categoria, nome').all();
-  res.json(dpi);
-});
-
-app.post('/api/dpi/catalogo', auth, isManager, (req, res) => {
-  const { nome, categoria, descrizione, taglia_disponibili, codice_barre } = req.body;
-  if (!nome || !categoria) return res.status(400).json({ error: 'Nome e categoria obbligatori' });
-  try {
-    const result = db.prepare('INSERT INTO dpi_catalogo (nome, categoria, descrizione, taglia_disponibili, codice_barre) VALUES (?, ?, ?, ?, ?)').run(nome, categoria, descrizione || '', taglia_disponibili || 'Unica', codice_barre || null);
-    res.json({ id: result.lastInsertRowid, message: 'DPI aggiunto' });
-  } catch { res.status(500).json({ error: 'Errore creazione DPI' }); }
-});
-
-app.patch('/api/dpi/catalogo/:id', auth, isManager, (req, res) => {
-  const { nome, categoria, descrizione, taglia_disponibili, codice_barre } = req.body;
-  if (!nome || !categoria) return res.status(400).json({ error: 'Nome e categoria obbligatori' });
-  try {
-    db.prepare('UPDATE dpi_catalogo SET nome=?, categoria=?, descrizione=?, taglia_disponibili=?, codice_barre=? WHERE id=?')
-      .run(nome, categoria, descrizione || '', taglia_disponibili || 'Unica', codice_barre || null, req.params.id);
-    res.json({ message: 'DPI aggiornato' });
-  } catch { res.status(500).json({ error: 'Errore aggiornamento DPI' }); }
-});
-
-// DPI Import/Export
-app.get('/api/dpi/export', auth, isManager, (req, res) => {
-  try {
-    const catalogo = db.prepare('SELECT * FROM dpi_catalogo ORDER BY categoria, nome').all();
-    const assegnazioni = db.prepare(`
-      SELECT a.*, d.nome as dpi_nome, d.categoria, u.name as dipendente_nome
-      FROM dpi_assegnazioni a
-      JOIN dpi_catalogo d ON a.dpi_id = d.id
-      JOIN users u ON a.user_id = u.id
-      ORDER BY a.data_consegna DESC
-    `).all();
-    
-    const exportData = {
-      version: '1.0',
-      exported_at: new Date().toISOString(),
-      catalogo,
-      assegnazioni
-    };
-    
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename=dpi-export-${new Date().toISOString().slice(0,10)}.json`);
-    res.json(exportData);
-  } catch (err) {
-    res.status(500).json({ error: 'Errore export: ' + err.message });
-  }
-});
-
-app.post('/api/dpi/import', auth, isAdmin, (req, res) => {
-  const { catalogo, assegnazioni } = req.body;
-  if (!catalogo) return res.status(400).json({ error: 'Dati catalogo mancanti' });
-  
-  try {
-    const transaction = db.transaction(() => {
-      // Import catalogo (solo nuovi elementi)
-      const insertDpi = db.prepare('INSERT OR IGNORE INTO dpi_catalogo (nome, categoria, descrizione, taglia_disponibili, codice_barre) VALUES (?, ?, ?, ?, ?)');
-      let imported = 0;
-      catalogo.forEach(d => {
-        const result = insertDpi.run(d.nome, d.categoria, d.descrizione, d.taglia_disponibili, d.codice_barre);
-        if (result.changes > 0) imported++;
-      });
-      
-      return imported;
-    });
-    
-    const imported = transaction();
-    res.json({ message: `Import completato: ${imported} DPI aggiunti al catalogo` });
-  } catch (err) {
-    res.status(500).json({ error: 'Errore import: ' + err.message });
-  }
-});
-
-app.delete('/api/dpi/catalogo/:id', auth, isManager, (req, res) => {
-  const assigned = db.prepare('SELECT COUNT(*) as c FROM dpi_assegnazioni WHERE dpi_id = ? AND stato = ?').get(req.params.id, 'attivo');
-  if (assigned.c > 0) return res.status(400).json({ error: 'DPI assegnato a dipendenti, impossibile eliminare' });
-  db.prepare('DELETE FROM dpi_catalogo WHERE id = ?').run(req.params.id);
-  res.json({ message: 'DPI eliminato' });
-});
-
-// DPI ASSEGNAZIONI
-app.get('/api/dpi/assegnazioni', auth, (req, res) => {
-  const { user_id } = req.query;
-  let query = `
-    SELECT a.*, d.nome as dpi_nome, d.categoria, u.name as dipendente_nome
-    FROM dpi_assegnazioni a
-    JOIN dpi_catalogo d ON a.dpi_id = d.id
-    JOIN users u ON a.user_id = u.id
-  `;
-  if (user_id) {
-    query += ' WHERE a.user_id = ?';
-    return res.json(db.prepare(query + ' ORDER BY a.data_consegna DESC').all(user_id));
-  }
-  // Managers see all, employees see only their own
-  if (req.user.role === 'employee') {
-    query += ' WHERE a.user_id = ?';
-    return res.json(db.prepare(query + ' ORDER BY a.data_consegna DESC').all(req.user.id));
-  }
-  res.json(db.prepare(query + ' ORDER BY a.data_consegna DESC').all());
-});
-
-app.post('/api/dpi/assegnazioni', auth, isManager, (req, res) => {
-  const { user_id, dpi_id, taglia, quantita, data_consegna, data_scadenza, note } = req.body;
-  if (!user_id || !dpi_id || !data_consegna) return res.status(400).json({ error: 'Dati incompleti' });
-  try {
-    const result = db.prepare(`
-      INSERT INTO dpi_assegnazioni (user_id, dpi_id, taglia, quantita, data_consegna, data_scadenza, note)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(user_id, dpi_id, taglia || '', quantita || 1, data_consegna, data_scadenza || null, note || '');
-    res.json({ id: result.lastInsertRowid, message: 'DPI assegnato' });
-  } catch { res.status(500).json({ error: 'Errore assegnazione' }); }
-});
-
-app.patch('/api/dpi/assegnazioni/:id', auth, isManager, (req, res) => {
-  const { stato, data_scadenza, note } = req.body;
-  const updates = [];
-  const values = [];
-  if (stato) { updates.push('stato = ?'); values.push(stato); }
-  if (data_scadenza !== undefined) { updates.push('data_scadenza = ?'); values.push(data_scadenza); }
-  if (note !== undefined) { updates.push('note = ?'); values.push(note); }
-  if (updates.length === 0) return res.status(400).json({ error: 'Nessun dato da aggiornare' });
-  values.push(req.params.id);
-  db.prepare(`UPDATE dpi_assegnazioni SET ${updates.join(', ')} WHERE id = ?`).run(...values);
-  res.json({ message: 'Aggiornato' });
-});
-
-app.delete('/api/dpi/assegnazioni/:id', auth, isManager, (req, res) => {
-  db.prepare('DELETE FROM dpi_assegnazioni WHERE id = ?').run(req.params.id);
-  res.json({ message: 'Assegnazione eliminata' });
-});
-
-// DPI per dipendente (riepilogo)
-app.get('/api/dpi/dipendente/:id', auth, (req, res) => {
-  const userId = req.params.id;
-  // Employees can only see their own
-  if (req.user.role === 'employee' && req.user.id != userId) {
-    return res.status(403).json({ error: 'Non autorizzato' });
-  }
-  const assegnazioni = db.prepare(`
-    SELECT a.*, d.nome as dpi_nome, d.categoria
-    FROM dpi_assegnazioni a
-    JOIN dpi_catalogo d ON a.dpi_id = d.id
-    WHERE a.user_id = ? AND a.stato = 'attivo'
-    ORDER BY d.categoria, d.nome
-  `).all(userId);
-  res.json(assegnazioni);
-});
-
-// LOGO UPLOAD
-const logoPath = path.join(__dirname, 'public', 'logo.png');
-
-app.get('/api/settings/logo', (req, res) => {
-  const exists = fs.existsSync(logoPath);
-  res.json({ hasLogo: exists, logoUrl: exists ? '/logo.png?t=' + Date.now() : '' });
-});
-
-app.post('/api/settings/logo', auth, isAdmin, express.json({ limit: '5mb' }), (req, res) => {
+// Settings & Logo
+app.post('/api/settings/logo', auth, isAdmin, (req, res) => {
   try {
     const { imageData } = req.body;
     if (!imageData) return res.status(400).json({ error: 'Nessuna immagine' });
-    
-    // Remove data:image/xxx;base64, prefix
     const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
-    const buffer = Buffer.from(base64Data, 'base64');
-    
-    fs.writeFileSync(logoPath, buffer);
-    res.json({ message: 'Logo salvato', logoUrl: '/logo.png?t=' + Date.now() });
-  } catch (e) {
-    res.status(500).json({ error: 'Errore nel salvataggio' });
-  }
+    fs.writeFileSync(path.join(__dirname, 'public', 'logo.png'), Buffer.from(base64Data, 'base64'));
+    res.json({ message: 'Logo aggiornato', logoUrl: '/logo.png?t=' + Date.now() });
+  } catch { res.status(500).json({ error: 'Errore salvataggio logo' }); }
+});
+app.get('/api/settings/logo', (req, res) => {
+  const exists = fs.existsSync(path.join(__dirname, 'public', 'logo.png'));
+  res.json({ hasLogo: exists, logoUrl: exists ? '/logo.png?t=' + Date.now() : '' });
 });
 
-app.delete('/api/settings/logo', auth, isAdmin, (req, res) => {
-  try {
-    if (fs.existsSync(logoPath)) fs.unlinkSync(logoPath);
-    res.json({ message: 'Logo rimosso' });
-  } catch { res.status(500).json({ error: 'Errore' }); }
-});
-
-// BACKUP & RESTORE
+// Backup
 app.get('/api/backup', auth, isAdmin, (req, res) => {
   try {
     const backup = {
       version: '1.0',
-      created_at: new Date().toISOString(),
+      date: new Date().toISOString(),
       data: {
         users: db.prepare('SELECT * FROM users').all(),
         requests: db.prepare('SELECT * FROM requests').all(),
         sedi: db.prepare('SELECT * FROM sedi').all(),
-        avvisi: db.prepare('SELECT * FROM avvisi').all(),
         cantieri: db.prepare('SELECT * FROM cantieri').all(),
-        cantieri_assegnazioni: db.prepare('SELECT * FROM cantieri_assegnazioni').all(),
-        notifications: db.prepare('SELECT * FROM notifications').all(),
-        dpi_catalogo: db.prepare('SELECT * FROM dpi_catalogo').all(),
-        dpi_assegnazioni: db.prepare('SELECT * FROM dpi_assegnazioni').all()
+        avvisi: db.prepare('SELECT * FROM avvisi').all()
       }
     };
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename=portal-backup-${new Date().toISOString().slice(0,10)}.json`);
     res.json(backup);
-  } catch (err) {
-    res.status(500).json({ error: 'Errore durante il backup: ' + err.message });
-  }
+  } catch { res.status(500).json({ error: 'Backup fallito' }); }
 });
 
-app.post('/api/restore', auth, isAdmin, (req, res) => {
-  const { data, version } = req.body;
-  if (!data || !version) return res.status(400).json({ error: 'File di backup non valido' });
-  
-  try {
-    // Usa una transazione per sicurezza
-    const transaction = db.transaction(() => {
-      // Pulisci tabelle esistenti (eccetto admin corrente)
-      const currentUserId = req.user.id;
-      
-      // Ripristina sedi
-      if (data.sedi) {
-        db.prepare('DELETE FROM sedi').run();
-        const insertSede = db.prepare('INSERT INTO sedi (id, nome, indirizzo, attiva, created_at) VALUES (?, ?, ?, ?, ?)');
-        data.sedi.forEach(s => insertSede.run(s.id, s.nome, s.indirizzo, s.attiva, s.created_at));
-      }
-      
-      // Ripristina utenti (mantiene l'admin corrente)
-      if (data.users) {
-        db.prepare('DELETE FROM users WHERE id != ?').run(currentUserId);
-        const insertUser = db.prepare('INSERT OR REPLACE INTO users (id, username, password, name, email, role, phone, department, total_days, used_days, sede_id, avatar, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        data.users.forEach(u => {
-          if (u.id !== currentUserId) {
-            insertUser.run(u.id, u.username, u.password, u.name, u.email, u.role, u.phone, u.department, u.total_days, u.used_days, u.sede_id, u.avatar, u.created_at);
-          }
-        });
-      }
-      
-      // Ripristina richieste
-      if (data.requests) {
-        db.prepare('DELETE FROM requests').run();
-        const insertReq = db.prepare('INSERT INTO requests (id, user_id, nome, email, reparto, responsabile, inizio, fine, giorni, tipo, urgenza, motivo, stato, approved_by, approved_at, codice_malattia, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        data.requests.forEach(r => insertReq.run(r.id, r.user_id, r.nome, r.email, r.reparto, r.responsabile, r.inizio, r.fine, r.giorni, r.tipo, r.urgenza, r.motivo, r.stato, r.approved_by, r.approved_at, r.codice_malattia, r.created_at));
-      }
-      
-      // Ripristina avvisi
-      if (data.avvisi) {
-        db.prepare('DELETE FROM avvisi').run();
-        const insertAvviso = db.prepare('INSERT INTO avvisi (id, titolo, messaggio, priorita, attivo, created_at) VALUES (?, ?, ?, ?, ?, ?)');
-        data.avvisi.forEach(a => insertAvviso.run(a.id, a.titolo, a.messaggio, a.priorita, a.attivo, a.created_at));
-      }
-      
-      // Ripristina cantieri
-      if (data.cantieri) {
-        db.prepare('DELETE FROM cantieri').run();
-        const insertCantiere = db.prepare('INSERT INTO cantieri (id, nome, cliente, indirizzo, stato, data_inizio, data_fine, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        data.cantieri.forEach(c => insertCantiere.run(c.id, c.nome, c.cliente, c.indirizzo, c.stato, c.data_inizio, c.data_fine, c.note, c.created_at));
-      }
-      
-      // Ripristina assegnazioni cantieri
-      if (data.cantieri_assegnazioni) {
-        db.prepare('DELETE FROM cantieri_assegnazioni').run();
-        const insertAss = db.prepare('INSERT INTO cantieri_assegnazioni (id, cantiere_id, user_id, ruolo) VALUES (?, ?, ?, ?)');
-        data.cantieri_assegnazioni.forEach(a => insertAss.run(a.id, a.cantiere_id, a.user_id, a.ruolo));
-      }
-      
-      // Ripristina notifiche
-      if (data.notifications) {
-        db.prepare('DELETE FROM notifications').run();
-        const insertNotif = db.prepare('INSERT INTO notifications (id, user_id, message, read, created_at) VALUES (?, ?, ?, ?, ?)');
-        data.notifications.forEach(n => insertNotif.run(n.id, n.user_id, n.message, n.read, n.created_at));
-      }
-      
-      // Ripristina catalogo DPI
-      if (data.dpi_catalogo) {
-        db.prepare('DELETE FROM dpi_catalogo').run();
-        const insertDpi = db.prepare('INSERT INTO dpi_catalogo (id, nome, categoria, descrizione, taglia_disponibili, created_at) VALUES (?, ?, ?, ?, ?, ?)');
-        data.dpi_catalogo.forEach(d => insertDpi.run(d.id, d.nome, d.categoria, d.descrizione, d.taglia_disponibili, d.created_at));
-      }
-      
-      // Ripristina assegnazioni DPI
-      if (data.dpi_assegnazioni) {
-        db.prepare('DELETE FROM dpi_assegnazioni').run();
-        const insertDpiAss = db.prepare('INSERT INTO dpi_assegnazioni (id, user_id, dpi_id, taglia, quantita, data_consegna, data_scadenza, note, stato, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        data.dpi_assegnazioni.forEach(a => insertDpiAss.run(a.id, a.user_id, a.dpi_id, a.taglia, a.quantita, a.data_consegna, a.data_scadenza, a.note, a.stato, a.created_at));
-      }
-    });
-    
-    transaction();
-    res.json({ message: 'Ripristino completato con successo!' });
-  } catch (err) {
-    res.status(500).json({ error: 'Errore durante il ripristino: ' + err.message });
-  }
-});
-
-// HTML Routes
-const pages = ['/', '/index.html', '/register.html', '/request.html', '/dashboard.html', '/admin.html', '/calendar.html', '/cantieri.html', '/settings.html', '/dpi.html'];
-pages.forEach(p => app.get(p, (req, res) => res.sendFile(path.join(__dirname, 'public', p === '/' ? 'index.html' : p))));
+// Serve Frontend
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Start Server
+app.listen(PORT, () => console.log(`Server avviato su porta ${PORT}`));
