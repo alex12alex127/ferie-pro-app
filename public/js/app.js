@@ -178,7 +178,13 @@ document.querySelectorAll('.sidebar-item').forEach(btn => {
 
 // Sidebar Toggle (Desktop)
 document.getElementById('sidebar-toggle').addEventListener('click', () => {
-  document.getElementById('sidebar').classList.toggle('collapsed');
+  const sidebar = document.getElementById('sidebar');
+  sidebar.classList.toggle('collapsed');
+  
+  // Re-initialize icons after DOM change
+  setTimeout(() => {
+    lucide.createIcons();
+  }, 100);
 });
 
 // Mobile Menu
@@ -193,6 +199,11 @@ function openMobileMenu() {
   overlay.id = 'sidebar-overlay';
   overlay.addEventListener('click', closeMobileMenu);
   document.body.appendChild(overlay);
+  
+  // Re-initialize icons
+  setTimeout(() => {
+    lucide.createIcons();
+  }, 100);
 }
 
 function closeMobileMenu() {

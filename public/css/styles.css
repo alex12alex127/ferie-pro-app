@@ -429,8 +429,29 @@ body {
 }
 
 .logo-icon {
-  font-size: 1.75rem;
-  filter: drop-shadow(0 2px 8px rgba(99, 102, 241, 0.5));
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.logo-icon i {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2.5;
+}
+
+.icon-gradient {
+  stroke: url(#icon-gradient);
+}
+
+/* SVG Gradient for icons */
+svg defs {
+  display: none;
 }
 
 .logo-text {
@@ -454,16 +475,19 @@ body {
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
+  color: rgba(255,255,255,0.8);
 }
 
 .sidebar-toggle:hover {
   background: rgba(255,255,255,0.15);
   transform: scale(1.05);
+  color: white;
 }
 
-.toggle-icon {
-  color: rgba(255,255,255,0.8);
-  font-size: 1.25rem;
+.sidebar-toggle i {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
 }
 
 /* Sidebar Navigation */
@@ -535,9 +559,26 @@ body {
 }
 
 .item-icon {
-  font-size: 1.25rem;
   min-width: 24px;
-  text-align: center;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+
+.item-icon i {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+}
+
+.sidebar-item.active .item-icon {
+  color: #a78bfa;
+}
+
+.sidebar-item:hover .item-icon {
+  color: #c4b5fd;
 }
 
 .item-text {
@@ -647,6 +688,16 @@ body {
   transform: translateX(4px);
 }
 
+.sidebar-logout .item-icon {
+  color: inherit;
+}
+
+.sidebar-logout .item-icon i {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+}
+
 /* ============================================
    Main Wrapper
    ============================================ */
@@ -682,10 +733,19 @@ body {
   display: none;
   background: transparent;
   border: none;
-  font-size: 1.5rem;
   cursor: pointer;
   color: var(--gray-700);
   padding: 0.5rem;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-menu-btn i {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2;
 }
 
 .topbar-title h1 {
@@ -712,15 +772,19 @@ body {
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
+  color: var(--gray-600);
 }
 
 .topbar-btn:hover {
   background: var(--gray-200);
   transform: scale(1.05);
+  color: var(--gray-900);
 }
 
-.topbar-icon {
-  font-size: 1.25rem;
+.topbar-btn i {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
 }
 
 .notification-dot {

@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ferie Pro</title>
   <link rel="stylesheet" href="/css/styles.css">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
   <div id="app">
@@ -121,40 +123,52 @@
         <aside class="sidebar" id="sidebar">
           <div class="sidebar-header">
             <div class="sidebar-logo">
-              <span class="logo-icon">🏖️</span>
+              <div class="logo-icon">
+                <i data-lucide="calendar-check" class="icon-gradient"></i>
+              </div>
               <span class="logo-text">Ferie Pro</span>
             </div>
             <button class="sidebar-toggle" id="sidebar-toggle">
-              <span class="toggle-icon">☰</span>
+              <i data-lucide="panel-left-close"></i>
             </button>
           </div>
 
           <nav class="sidebar-nav">
             <button class="sidebar-item active" data-page="home">
-              <span class="item-icon">🏠</span>
+              <span class="item-icon">
+                <i data-lucide="layout-dashboard"></i>
+              </span>
               <span class="item-text">Dashboard</span>
             </button>
             
             <button class="sidebar-item" data-page="profile">
-              <span class="item-icon">👤</span>
+              <span class="item-icon">
+                <i data-lucide="user-circle"></i>
+              </span>
               <span class="item-text">Il Mio Profilo</span>
             </button>
             
             <button class="sidebar-item" data-page="requests">
-              <span class="item-icon">📋</span>
+              <span class="item-icon">
+                <i data-lucide="file-text"></i>
+              </span>
               <span class="item-text">Le Mie Richieste</span>
               <span class="item-badge" id="requests-badge">0</span>
             </button>
             
             <button class="sidebar-item" data-page="new-request">
-              <span class="item-icon">✨</span>
+              <span class="item-icon">
+                <i data-lucide="plus-circle"></i>
+              </span>
               <span class="item-text">Nuova Richiesta</span>
             </button>
 
             <div class="sidebar-divider"></div>
             
             <button class="sidebar-item admin-only" data-page="admin">
-              <span class="item-icon">⚙️</span>
+              <span class="item-icon">
+                <i data-lucide="settings"></i>
+              </span>
               <span class="item-text">Amministrazione</span>
               <span class="item-badge admin-badge" id="admin-badge">0</span>
             </button>
@@ -171,7 +185,9 @@
               </div>
             </div>
             <button class="sidebar-logout" id="logout-btn">
-              <span class="item-icon">🚪</span>
+              <span class="item-icon">
+                <i data-lucide="log-out"></i>
+              </span>
               <span class="item-text">Esci</span>
             </button>
           </div>
@@ -182,14 +198,14 @@
           <!-- Top Bar -->
           <header class="topbar">
             <button class="mobile-menu-btn" id="mobile-menu-btn">
-              <span class="toggle-icon">☰</span>
+              <i data-lucide="menu"></i>
             </button>
             <div class="topbar-title">
               <h1 id="page-title">Dashboard</h1>
             </div>
             <div class="topbar-actions">
               <button class="topbar-btn" id="notifications-btn" title="Notifiche">
-                <span class="topbar-icon">🔔</span>
+                <i data-lucide="bell"></i>
                 <span class="notification-dot" id="notification-dot"></span>
               </button>
             </div>
@@ -353,5 +369,9 @@
   </div>
 
   <script src="/js/app.js"></script>
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+  </script>
 </body>
 </html>
