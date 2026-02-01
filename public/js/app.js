@@ -12,8 +12,6 @@ const registerPage = document.getElementById('register-page');
 const dashboardPage = document.getElementById('dashboard-page');
 const loginForm = document.getElementById('login-form');
 const registerForm = document.getElementById('register-form');
-const logoutBtn = document.getElementById('logout-btn');
-const userName = document.getElementById('user-name');
 
 // ============================================
 // API Helper
@@ -75,6 +73,11 @@ function showDashboard() {
   document.querySelectorAll('.admin-only').forEach(el => {
     el.classList.toggle('hidden', user.role !== 'admin');
   });
+  
+  // Initialize Lucide icons
+  setTimeout(() => {
+    lucide.createIcons();
+  }, 100);
   
   loadDashboard();
 }
@@ -188,8 +191,16 @@ document.getElementById('sidebar-toggle').addEventListener('click', () => {
 });
 
 // Mobile Menu
-const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-const sidebar = document.getElementById('sidebar');
+let mobileMenuBtn, sidebar;
+
+document.addEventListener('DOMContentLoaded', () => {
+  mobileMenuBtn = document.getElementById('mobile-menu-btn');
+  sidebar = document.getElementById('sidebar');
+  
+  if (mobileMenuBtn) {
+    mobileMenuBtn.addEventListener('click', openMobileMenu);
+  }
+});
 
 function openMobileMenu() {
   sidebar.classList.add('mobile-open');
@@ -207,14 +218,21 @@ function openMobileMenu() {
 }
 
 function closeMobileMenu() {
-  sidebar.classList.remove('mobile-open');
+  if (sidebar) {
+    sidebar.classList.remove('mobile-open');
+  }
   const overlay = document.getElementById('sidebar-overlay');
   if (overlay) {
     overlay.remove();
   }
 }
 
-mobileMenuBtn.addEventListener('click', openMobileMenu);
+// Close mobile menu on window resize
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 768) {
+    closeMobileMenu();
+  }
+});
 
 // ============================================
 // Tabs (Admin)
@@ -412,13 +430,22 @@ async function loadUsers() {
 // Actions
 // ============================================
 async function updateRequest(id, status) {
+  if (!confirm(`Sei sicuro di voler ${status === 'approved' ? 'approvare' : 'rifiutare'} questa richiesta?`)) {
+    return;
+  }
+  
   try {
     await api(`/requests/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({ status })
     });
-    loadAdminRequests();
-    loadStats();
+    
+    alert(`Richiesta ${status === 'approved' ? 'approvata' : 'rifiutata'} con successo!`);
+    
+    await Promise.all([
+      loadAdminRequests(),
+      loadStats()
+    ]);
   } catch (e) {
     alert(e.message);
   }
@@ -481,7 +508,10 @@ loginForm.addEventListener('submit', async (e) => {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
     
-    showDashboard();
+    // Initialize icons before showing dashboard
+    setTimeout(() => {
+      showDashboard();
+    }, 50);
   } catch (e) {
     alert(e.message);
   }
@@ -560,25 +590,31 @@ registerForm.addEventListener('submit', async (e) => {
     localStorage.setItem('user', JSON.stringify(user));
     
     alert('Registrazione completata con successo!');
-    showDashboard();
+    
+    // Initialize icons before showing dashboard
+    setTimeout(() => {
+      showDashboard();
+    }, 50);
   } catch (e) {
     alert(e.message);
   }
 });
 
 // Show Register Page
-document.getElementById('show-register').addEventListener('click', (e) => {
+document.getElementById('show-register')?.addEventListener('click', (e) => {
   e.preventDefault();
   showRegister();
   registerForm.reset();
   clearAllErrors();
+  setTimeout(() => lucide.createIcons(), 50);
 });
 
 // Show Login Page
-document.getElementById('show-login').addEventListener('click', (e) => {
+document.getElementById('show-login')?.addEventListener('click', (e) => {
   e.preventDefault();
   showLogin();
   loginForm.reset();
+  setTimeout(() => lucide.createIcons(), 50);
 });
 
 // Password Strength Indicator
@@ -633,7 +669,12 @@ document.getElementById('reg-password-confirm').addEventListener('blur', (e) => 
 });
 
 // Logout
-logoutBtn.addEventListener('click', logout);
+document.addEventListener('DOMContentLoaded', () => {
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', logout);
+  }
+});
 
 // New Request Form
 document.getElementById('request-form').addEventListener('submit', async (e) => {
@@ -653,8 +694,9 @@ document.getElementById('request-form').addEventListener('submit', async (e) => 
     alert('Richiesta inviata con successo!');
     e.target.reset();
     
-    // Go to requests page
-    document.querySelector('[data-page="requests"]').click();
+    // Reload stats and go to requests page
+    await loadStats();
+    document.querySelector('[data-page="requests"]')?.click();
   } catch (e) {
     alert(e.message);
   }
@@ -663,8 +705,13 @@ document.getElementById('request-form').addEventListener('submit', async (e) => 
 // ============================================
 // Init
 // ============================================
-if (token && user) {
-  showDashboard();
-} else {
-  showLogin();
-}
+document.addEventListener('DOMContentLoaded', () => {
+  if (token && user) {
+    showDashboard();
+  } else {
+    showLogin();
+  }
+  
+  // Initialize Lucide icons
+  lucide.createIcons();
+});
