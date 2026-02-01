@@ -116,28 +116,87 @@
 
     <!-- Dashboard Page -->
     <div id="dashboard-page" class="page hidden">
-      <!-- Header -->
-      <header class="header">
-        <div class="header-left">
-          <h1>Ferie Pro</h1>
-        </div>
-        <div class="header-right">
-          <span id="user-name"></span>
-          <button id="logout-btn" class="btn btn-outline">Esci</button>
-        </div>
-      </header>
+      <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+          <div class="sidebar-header">
+            <div class="sidebar-logo">
+              <span class="logo-icon">🏖️</span>
+              <span class="logo-text">Ferie Pro</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebar-toggle">
+              <span class="toggle-icon">☰</span>
+            </button>
+          </div>
 
-      <!-- Navigation -->
-      <nav class="nav">
-        <button class="nav-btn active" data-page="home">Home</button>
-        <button class="nav-btn" data-page="profile">Il Mio Profilo</button>
-        <button class="nav-btn" data-page="requests">Richieste</button>
-        <button class="nav-btn" data-page="new-request">Nuova Richiesta</button>
-        <button class="nav-btn admin-only" data-page="admin">Admin</button>
-      </nav>
+          <nav class="sidebar-nav">
+            <button class="sidebar-item active" data-page="home">
+              <span class="item-icon">🏠</span>
+              <span class="item-text">Dashboard</span>
+            </button>
+            
+            <button class="sidebar-item" data-page="profile">
+              <span class="item-icon">👤</span>
+              <span class="item-text">Il Mio Profilo</span>
+            </button>
+            
+            <button class="sidebar-item" data-page="requests">
+              <span class="item-icon">📋</span>
+              <span class="item-text">Le Mie Richieste</span>
+              <span class="item-badge" id="requests-badge">0</span>
+            </button>
+            
+            <button class="sidebar-item" data-page="new-request">
+              <span class="item-icon">✨</span>
+              <span class="item-text">Nuova Richiesta</span>
+            </button>
 
-      <!-- Main Content -->
-      <main class="main">
+            <div class="sidebar-divider"></div>
+            
+            <button class="sidebar-item admin-only" data-page="admin">
+              <span class="item-icon">⚙️</span>
+              <span class="item-text">Amministrazione</span>
+              <span class="item-badge admin-badge" id="admin-badge">0</span>
+            </button>
+          </nav>
+
+          <div class="sidebar-footer">
+            <div class="sidebar-user">
+              <div class="user-avatar" id="sidebar-avatar">
+                <span id="sidebar-initials">U</span>
+              </div>
+              <div class="user-info">
+                <div class="user-name" id="sidebar-user-name">Utente</div>
+                <div class="user-role" id="sidebar-user-role">Dipendente</div>
+              </div>
+            </div>
+            <button class="sidebar-logout" id="logout-btn">
+              <span class="item-icon">🚪</span>
+              <span class="item-text">Esci</span>
+            </button>
+          </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="main-wrapper">
+          <!-- Top Bar -->
+          <header class="topbar">
+            <button class="mobile-menu-btn" id="mobile-menu-btn">
+              <span class="toggle-icon">☰</span>
+            </button>
+            <div class="topbar-title">
+              <h1 id="page-title">Dashboard</h1>
+            </div>
+            <div class="topbar-actions">
+              <button class="topbar-btn" id="notifications-btn" title="Notifiche">
+                <span class="topbar-icon">🔔</span>
+                <span class="notification-dot" id="notification-dot"></span>
+              </button>
+            </div>
+          </header>
+
+          <!-- Main Content -->
+          <main class="main">
         <!-- Home Section -->
         <section id="home-section" class="section">
           <div class="stats-grid">
@@ -287,7 +346,9 @@
             <div id="users-list" class="users-list"></div>
           </div>
         </section>
-      </main>
+          </main>
+        </div>
+      </div>
     </div>
   </div>
 

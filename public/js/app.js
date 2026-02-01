@@ -64,7 +64,12 @@ function showDashboard() {
   loginPage.classList.add('hidden');
   registerPage.classList.add('hidden');
   dashboardPage.classList.remove('hidden');
-  userName.textContent = user.name;
+  
+  // Update sidebar user info
+  const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  document.getElementById('sidebar-initials').textContent = initials;
+  document.getElementById('sidebar-user-name').textContent = user.name;
+  document.getElementById('sidebar-user-role').textContent = getRoleLabel(user.role);
   
   // Show/hide admin elements
   document.querySelectorAll('.admin-only').forEach(el => {
@@ -138,17 +143,30 @@ function clearAllErrors() {
 // ============================================
 // Navigation
 // ============================================
-document.querySelectorAll('.nav-btn').forEach(btn => {
+document.querySelectorAll('.sidebar-item').forEach(btn => {
   btn.addEventListener('click', () => {
     const page = btn.dataset.page;
     
     // Update active nav
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+    
+    // Update page title
+    const titles = {
+      'home': 'Dashboard',
+      'profile': 'Il Mio Profilo',
+      'requests': 'Le Mie Richieste',
+      'new-request': 'Nuova Richiesta',
+      'admin': 'Amministrazione'
+    };
+    document.getElementById('page-title').textContent = titles[page] || 'Dashboard';
     
     // Show section
     document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
     document.getElementById(`${page}-section`).classList.remove('hidden');
+    
+    // Close mobile menu
+    closeMobileMenu();
     
     // Load data
     if (page === 'home') loadStats();
@@ -157,6 +175,35 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     if (page === 'admin') loadAdminData();
   });
 });
+
+// Sidebar Toggle (Desktop)
+document.getElementById('sidebar-toggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('collapsed');
+});
+
+// Mobile Menu
+const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+const sidebar = document.getElementById('sidebar');
+
+function openMobileMenu() {
+  sidebar.classList.add('mobile-open');
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'sidebar-overlay active';
+  overlay.id = 'sidebar-overlay';
+  overlay.addEventListener('click', closeMobileMenu);
+  document.body.appendChild(overlay);
+}
+
+function closeMobileMenu() {
+  sidebar.classList.remove('mobile-open');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (overlay) {
+    overlay.remove();
+  }
+}
+
+mobileMenuBtn.addEventListener('click', openMobileMenu);
 
 // ============================================
 // Tabs (Admin)
@@ -186,6 +233,19 @@ async function loadStats() {
     document.getElementById('stat-total').textContent = stats.total;
     document.getElementById('stat-pending').textContent = stats.pending;
     document.getElementById('stat-approved').textContent = stats.approved;
+    
+    // Update badges
+    const requestsBadge = document.getElementById('requests-badge');
+    if (requestsBadge) {
+      requestsBadge.textContent = stats.total;
+      requestsBadge.style.display = stats.total > 0 ? 'block' : 'none';
+    }
+    
+    const adminBadge = document.getElementById('admin-badge');
+    if (adminBadge && user.role === 'admin') {
+      adminBadge.textContent = stats.pending;
+      adminBadge.style.display = stats.pending > 0 ? 'block' : 'none';
+    }
   } catch (e) {
     console.error('Error loading stats:', e);
   }
