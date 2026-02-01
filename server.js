@@ -22,62 +22,193 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================================
-// DATABASE SETUP
+// DATABASE SETUP COMPLETO
 // ============================================
 const dataDir = path.join(__dirname, 'data');
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
 const db = new Database(path.join(dataDir, 'ferie.db'));
 
-// Inizializza tabelle
+// Abilita foreign keys e WAL mode per performance
+db.pragma('foreign_keys = ON');
+db.pragma('journal_mode = WAL');
+
+// ============================================
+// SCHEMA DATABASE COMPLETO
+// ============================================
 db.exec(`
+  -- Tabella Utenti
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    role TEXT DEFAULT 'employee',
+    role TEXT DEFAULT 'employee' CHECK(role IN ('admin', 'manager', 'employee')),
+    phone TEXT,
+    department TEXT,
     total_days INTEGER DEFAULT 26,
     used_days INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
-  
+
+  -- Tabella Richieste
   CREATE TABLE IF NOT EXISTS requests (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    type TEXT DEFAULT 'Ferie',
+    type TEXT DEFAULT 'Ferie' CHECK(type IN ('Ferie', 'Permesso', 'Malattia')),
     start_date TEXT NOT NULL,
     end_date TEXT NOT NULL,
-    days INTEGER DEFAULT 1,
+    days INTEGER NOT NULL,
     reason TEXT,
-    status TEXT DEFAULT 'pending',
+    status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected')),
+    approved_by INTEGER,
+    approved_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (approved_by) REFERENCES users(id)
   );
+
+  -- Tabella Log Giorni (per tracciare modifiche ai giorni ferie)
+  CREATE TABLE IF NOT EXISTS days_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    request_id INTEGER,
+    action TEXT NOT NULL CHECK(action IN ('add', 'subtract', 'reset', 'adjust')),
+    days_changed INTEGER NOT NULL,
+    old_value INTEGER NOT NULL,
+    new_value INTEGER NOT NULL,
+    reason TEXT,
+    created_by INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (request_id) REFERENCES requests(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id)
+  );
+
+  -- Tabella Notifiche
+  CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    type TEXT DEFAULT 'info' CHECK(type IN ('info', 'success', 'warning', 'error')),
+    read INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  -- Tabella Festività
+  CREATE TABLE IF NOT EXISTS holidays (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    date TEXT NOT NULL UNIQUE,
+    type TEXT DEFAULT 'national' CHECK(type IN ('national', 'company')),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  -- Indici per performance
+  CREATE INDEX IF NOT EXISTS idx_requests_user_id ON requests(user_id);
+  CREATE INDEX IF NOT EXISTS idx_requests_status ON requests(status);
+  CREATE INDEX IF NOT EXISTS idx_requests_dates ON requests(start_date, end_date);
+  CREATE INDEX IF NOT EXISTS idx_days_log_user_id ON days_log(user_id);
+  CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+  CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);
 `);
 
-// Crea admin di default se non esiste
-const adminExists = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
-if (!adminExists) {
-  db.prepare('INSERT INTO users (username, password, name, email, role) VALUES (?, ?, ?, ?, ?)')
-    .run('admin', bcrypt.hashSync('admin123', 10), 'Amministratore', 'admin@azienda.it', 'admin');
-  console.log('Admin creato: admin / admin123');
+// ============================================
+// INIZIALIZZAZIONE DATI
+// ============================================
+function initializeData() {
+  // Crea admin di default
+  const adminExists = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
+  if (!adminExists) {
+    db.prepare('INSERT INTO users (username, password, name, email, role, total_days) VALUES (?, ?, ?, ?, ?, ?)')
+      .run('admin', bcrypt.hashSync('admin123', 10), 'Amministratore', 'admin@azienda.it', 'admin', 26);
+    console.log('✓ Admin creato: admin / admin123');
+  }
+
+  // Crea dipendente demo
+  const employeeExists = db.prepare('SELECT id FROM users WHERE username = ?').get('mario.rossi');
+  if (!employeeExists) {
+    db.prepare('INSERT INTO users (username, password, name, email, role, department, total_days, used_days) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .run('mario.rossi', bcrypt.hashSync('demo123', 10), 'Mario Rossi', 'mario.rossi@azienda.it', 'employee', 'IT', 26, 5);
+    console.log('✓ Dipendente demo creato: mario.rossi / demo123');
+  }
+
+  // Aggiungi festività italiane 2026
+  const holidaysCount = db.prepare('SELECT COUNT(*) as count FROM holidays').get().count;
+  if (holidaysCount === 0) {
+    const holidays = [
+      ['Capodanno', '2026-01-01', 'national'],
+      ['Epifania', '2026-01-06', 'national'],
+      ['Pasqua', '2026-04-05', 'national'],
+      ['Lunedì dell\'Angelo', '2026-04-06', 'national'],
+      ['Festa della Liberazione', '2026-04-25', 'national'],
+      ['Festa del Lavoro', '2026-05-01', 'national'],
+      ['Festa della Repubblica', '2026-06-02', 'national'],
+      ['Ferragosto', '2026-08-15', 'national'],
+      ['Tutti i Santi', '2026-11-01', 'national'],
+      ['Immacolata Concezione', '2026-12-08', 'national'],
+      ['Natale', '2026-12-25', 'national'],
+      ['Santo Stefano', '2026-12-26', 'national']
+    ];
+    
+    const insertHoliday = db.prepare('INSERT INTO holidays (name, date, type) VALUES (?, ?, ?)');
+    holidays.forEach(h => insertHoliday.run(...h));
+    console.log('✓ Festività 2026 caricate');
+  }
 }
+
+initializeData();
 
 // ============================================
 // HELPERS
 // ============================================
+
+// Calcola giorni lavorativi escludendo weekend e festività
 function calcWorkDays(start, end) {
   let count = 0;
   let current = new Date(start);
   const finish = new Date(end);
+  
+  // Ottieni tutte le festività
+  const holidays = db.prepare('SELECT date FROM holidays').all().map(h => h.date);
+  
   while (current <= finish) {
     const day = current.getDay();
-    if (day !== 0 && day !== 6) count++;
+    const dateStr = current.toISOString().split('T')[0];
+    
+    // Escludi weekend (0=domenica, 6=sabato) e festività
+    if (day !== 0 && day !== 6 && !holidays.includes(dateStr)) {
+      count++;
+    }
     current.setDate(current.getDate() + 1);
   }
+  
   return count || 1;
+}
+
+// Crea notifica
+function createNotification(userId, title, message, type = 'info') {
+  try {
+    db.prepare('INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, ?)')
+      .run(userId, title, message, type);
+  } catch (e) {
+    console.error('Errore creazione notifica:', e);
+  }
+}
+
+// Log modifica giorni
+function logDaysChange(userId, action, daysChanged, oldValue, newValue, reason, createdBy, requestId = null) {
+  try {
+    db.prepare('INSERT INTO days_log (user_id, request_id, action, days_changed, old_value, new_value, reason, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(userId, requestId, action, daysChanged, oldValue, newValue, reason, createdBy);
+  } catch (e) {
+    console.error('Errore log giorni:', e);
+  }
 }
 
 // ============================================
@@ -97,6 +228,13 @@ function auth(req, res, next) {
 
 function isAdmin(req, res, next) {
   if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Accesso negato' });
+  }
+  next();
+}
+
+function isManagerOrAdmin(req, res, next) {
+  if (!['admin', 'manager'].includes(req.user.role)) {
     return res.status(403).json({ error: 'Accesso negato' });
   }
   next();
@@ -161,9 +299,22 @@ app.post('/api/register', (req, res) => {
 
 // --- PROFILE ---
 app.get('/api/profile', auth, (req, res) => {
-  const user = db.prepare('SELECT id, username, name, email, role, total_days, used_days FROM users WHERE id = ?')
+  const user = db.prepare('SELECT id, username, name, email, role, phone, department, total_days, used_days, created_at FROM users WHERE id = ?')
     .get(req.user.id);
   res.json(user);
+});
+
+app.patch('/api/profile', auth, (req, res) => {
+  try {
+    const { name, email, phone, department } = req.body;
+    
+    db.prepare('UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), phone = COALESCE(?, phone), department = COALESCE(?, department), updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .run(name, email, phone, department, req.user.id);
+    
+    res.json({ message: 'Profilo aggiornato' });
+  } catch (e) {
+    res.status(400).json({ error: 'Errore aggiornamento profilo' });
+  }
 });
 
 // --- REQUESTS ---
@@ -171,14 +322,20 @@ app.get('/api/requests', auth, (req, res) => {
   let requests;
   if (req.user.role === 'admin') {
     requests = db.prepare(`
-      SELECT r.*, u.name as user_name 
+      SELECT r.*, u.name as user_name, a.name as approved_by_name
       FROM requests r 
       JOIN users u ON r.user_id = u.id 
+      LEFT JOIN users a ON r.approved_by = a.id
       ORDER BY r.created_at DESC
     `).all();
   } else {
-    requests = db.prepare('SELECT * FROM requests WHERE user_id = ? ORDER BY created_at DESC')
-      .all(req.user.id);
+    requests = db.prepare(`
+      SELECT r.*, a.name as approved_by_name
+      FROM requests r
+      LEFT JOIN users a ON r.approved_by = a.id
+      WHERE r.user_id = ? 
+      ORDER BY r.created_at DESC
+    `).all(req.user.id);
   }
   res.json(requests);
 });
@@ -186,50 +343,193 @@ app.get('/api/requests', auth, (req, res) => {
 app.post('/api/requests', auth, (req, res) => {
   try {
     const { type, start_date, end_date, reason } = req.body;
+    
+    if (!start_date || !end_date) {
+      return res.status(400).json({ error: 'Date mancanti' });
+    }
+    
     const days = calcWorkDays(start_date, end_date);
+    
+    // Verifica disponibilità giorni per ferie
+    if (type === 'Ferie') {
+      const user = db.prepare('SELECT total_days, used_days FROM users WHERE id = ?').get(req.user.id);
+      const available = user.total_days - user.used_days;
+      
+      if (days > available) {
+        return res.status(400).json({ error: `Giorni insufficienti. Disponibili: ${available}, Richiesti: ${days}` });
+      }
+    }
     
     db.prepare('INSERT INTO requests (user_id, type, start_date, end_date, days, reason) VALUES (?, ?, ?, ?, ?, ?)')
       .run(req.user.id, type || 'Ferie', start_date, end_date, days, reason || '');
     
-    res.json({ message: 'Richiesta inviata' });
+    // Notifica admin
+    const admins = db.prepare('SELECT id FROM users WHERE role = "admin"').all();
+    admins.forEach(admin => {
+      createNotification(admin.id, 'Nuova Richiesta', `Nuova richiesta di ${type} da approvare`, 'info');
+    });
+    
+    res.json({ message: 'Richiesta inviata', days });
   } catch (e) {
+    console.error(e);
     res.status(500).json({ error: 'Errore creazione richiesta' });
   }
 });
 
-app.patch('/api/requests/:id', auth, isAdmin, (req, res) => {
-  try {
-    const { status } = req.body;
-    const request = db.prepare('SELECT * FROM requests WHERE id = ?').get(req.params.id);
+app.patch('/api/requests/:id', auth, isManagerOrAdmin, (req, res) => {
+  const transaction = db.transaction((requestId, newStatus, adminId) => {
+    const request = db.prepare('SELECT * FROM requests WHERE id = ?').get(requestId);
     
     if (!request) {
-      return res.status(404).json({ error: 'Richiesta non trovata' });
+      throw new Error('Richiesta non trovata');
+    }
+
+    const oldStatus = request.status;
+    
+    // Aggiorna stato richiesta
+    db.prepare('UPDATE requests SET status = ?, approved_by = ?, approved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .run(newStatus, adminId, requestId);
+    
+    // Gestione giorni ferie
+    if (request.type === 'Ferie') {
+      const user = db.prepare('SELECT total_days, used_days FROM users WHERE id = ?').get(request.user_id);
+      
+      // Se passa da pending ad approved: scala giorni
+      if (oldStatus === 'pending' && newStatus === 'approved') {
+        const newUsedDays = user.used_days + request.days;
+        db.prepare('UPDATE users SET used_days = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+          .run(newUsedDays, request.user_id);
+        
+        logDaysChange(
+          request.user_id,
+          'subtract',
+          request.days,
+          user.used_days,
+          newUsedDays,
+          `Richiesta #${requestId} approvata`,
+          adminId,
+          requestId
+        );
+        
+        createNotification(request.user_id, 'Richiesta Approvata', `La tua richiesta di ${request.type} è stata approvata`, 'success');
+      }
+      
+      // Se passa da approved a rejected/pending: restituisci giorni
+      if (oldStatus === 'approved' && newStatus !== 'approved') {
+        const newUsedDays = Math.max(0, user.used_days - request.days);
+        db.prepare('UPDATE users SET used_days = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+          .run(newUsedDays, request.user_id);
+        
+        logDaysChange(
+          request.user_id,
+          'add',
+          request.days,
+          user.used_days,
+          newUsedDays,
+          `Richiesta #${requestId} modificata da approved a ${newStatus}`,
+          adminId,
+          requestId
+        );
+      }
     }
     
-    db.prepare('UPDATE requests SET status = ? WHERE id = ?').run(status, req.params.id);
-    
-    // Aggiorna giorni usati se approvata
-    if (status === 'approved' && request.type === 'Ferie') {
-      db.prepare('UPDATE users SET used_days = used_days + ? WHERE id = ?')
-        .run(request.days, request.user_id);
+    // Notifica utente
+    if (newStatus === 'rejected') {
+      createNotification(request.user_id, 'Richiesta Rifiutata', `La tua richiesta di ${request.type} è stata rifiutata`, 'error');
     }
-    
-    res.json({ message: 'Stato aggiornato' });
+  });
+  
+  try {
+    const { status } = req.body;
+    transaction(req.params.id, status, req.user.id);
+    res.json({ message: 'Stato aggiornato con successo' });
   } catch (e) {
-    res.status(500).json({ error: 'Errore aggiornamento' });
+    console.error(e);
+    res.status(500).json({ error: e.message || 'Errore aggiornamento' });
   }
 });
 
 app.delete('/api/requests/:id', auth, isAdmin, (req, res) => {
-  db.prepare('DELETE FROM requests WHERE id = ?').run(req.params.id);
-  res.json({ message: 'Richiesta eliminata' });
+  const transaction = db.transaction((requestId) => {
+    const request = db.prepare('SELECT * FROM requests WHERE id = ?').get(requestId);
+    
+    if (!request) {
+      throw new Error('Richiesta non trovata');
+    }
+    
+    // Se era approvata, restituisci i giorni
+    if (request.status === 'approved' && request.type === 'Ferie') {
+      const user = db.prepare('SELECT used_days FROM users WHERE id = ?').get(request.user_id);
+      const newUsedDays = Math.max(0, user.used_days - request.days);
+      
+      db.prepare('UPDATE users SET used_days = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+        .run(newUsedDays, request.user_id);
+      
+      logDaysChange(
+        request.user_id,
+        'add',
+        request.days,
+        user.used_days,
+        newUsedDays,
+        `Richiesta #${requestId} eliminata`,
+        req.user.id,
+        null
+      );
+    }
+    
+    db.prepare('DELETE FROM requests WHERE id = ?').run(requestId);
+  });
+  
+  try {
+    transaction(req.params.id);
+    res.json({ message: 'Richiesta eliminata' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // --- USERS (Admin only) ---
 app.get('/api/users', auth, isAdmin, (req, res) => {
-  const users = db.prepare('SELECT id, username, name, email, role, total_days, used_days FROM users ORDER BY name')
+  const users = db.prepare('SELECT id, username, name, email, role, phone, department, total_days, used_days, created_at FROM users ORDER BY name')
     .all();
   res.json(users);
+});
+
+app.post('/api/users', auth, isAdmin, (req, res) => {
+  try {
+    const { username, password, name, email, role, total_days } = req.body;
+    
+    const hash = bcrypt.hashSync(password || 'password123', 10);
+    db.prepare('INSERT INTO users (username, password, name, email, role, total_days) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(username, hash, name, email, role || 'employee', total_days || 26);
+    
+    res.json({ message: 'Utente creato' });
+  } catch (e) {
+    res.status(400).json({ error: 'Errore creazione utente' });
+  }
+});
+
+app.patch('/api/users/:id', auth, isAdmin, (req, res) => {
+  try {
+    const { total_days, used_days } = req.body;
+    const user = db.prepare('SELECT total_days, used_days FROM users WHERE id = ?').get(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'Utente non trovato' });
+    }
+    
+    db.prepare('UPDATE users SET total_days = COALESCE(?, total_days), used_days = COALESCE(?, used_days), updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .run(total_days, used_days, req.params.id);
+    
+    // Log modifica
+    if (total_days !== undefined && total_days !== user.total_days) {
+      logDaysChange(req.params.id, 'adjust', total_days - user.total_days, user.total_days, total_days, 'Modifica manuale admin', req.user.id);
+    }
+    
+    res.json({ message: 'Utente aggiornato' });
+  } catch (e) {
+    res.status(400).json({ error: 'Errore aggiornamento utente' });
+  }
 });
 
 app.delete('/api/users/:id', auth, isAdmin, (req, res) => {
@@ -252,6 +552,38 @@ app.get('/api/stats', auth, (req, res) => {
   res.json({ total, pending, approved });
 });
 
+// --- NOTIFICATIONS ---
+app.get('/api/notifications', auth, (req, res) => {
+  const notifications = db.prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50')
+    .all(req.user.id);
+  res.json(notifications);
+});
+
+app.patch('/api/notifications/:id/read', auth, (req, res) => {
+  db.prepare('UPDATE notifications SET read = 1 WHERE id = ? AND user_id = ?')
+    .run(req.params.id, req.user.id);
+  res.json({ message: 'Notifica letta' });
+});
+
+// --- DAYS LOG (Admin) ---
+app.get('/api/days-log/:userId', auth, isAdmin, (req, res) => {
+  const logs = db.prepare(`
+    SELECT dl.*, u.name as created_by_name 
+    FROM days_log dl
+    JOIN users u ON dl.created_by = u.id
+    WHERE dl.user_id = ?
+    ORDER BY dl.created_at DESC
+    LIMIT 100
+  `).all(req.params.userId);
+  res.json(logs);
+});
+
+// --- HOLIDAYS ---
+app.get('/api/holidays', (req, res) => {
+  const holidays = db.prepare('SELECT * FROM holidays ORDER BY date').all();
+  res.json(holidays);
+});
+
 // ============================================
 // SERVE FRONTEND
 // ============================================
@@ -263,5 +595,12 @@ app.get('*', (req, res) => {
 // START SERVER
 // ============================================
 app.listen(PORT, () => {
-  console.log(`Server avviato su http://localhost:${PORT}`);
+  console.log(`
+╔════════════════════════════════════════╗
+║   🚀 Ferie Pro Server                  ║
+║   📍 http://localhost:${PORT}            ║
+║   ✓ Database inizializzato            ║
+║   ✓ Transazioni abilitate             ║
+╚════════════════════════════════════════╝
+  `);
 });
