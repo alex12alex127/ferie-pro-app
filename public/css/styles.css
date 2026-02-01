@@ -119,6 +119,121 @@ body {
   border-radius: 10px;
 }
 
+.auth-switch {
+  margin-top: 1.5rem;
+  text-align: center;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--gray-200);
+}
+
+.auth-switch p {
+  color: var(--gray-600);
+  font-size: 0.9rem;
+}
+
+.auth-switch a {
+  color: #6366f1;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.auth-switch a:hover {
+  color: #8b5cf6;
+  text-decoration: underline;
+}
+
+/* Register Container */
+.register-container {
+  max-width: 520px;
+}
+
+.register-container h1 {
+  font-size: 1.75rem;
+}
+
+/* Form Hints & Errors */
+.form-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  margin-top: 0.25rem;
+}
+
+.form-error {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--danger);
+  margin-top: 0.25rem;
+  min-height: 1rem;
+}
+
+/* Password Strength */
+.password-strength {
+  margin-top: 0.5rem;
+  height: 4px;
+  background: var(--gray-200);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.strength-bar {
+  height: 100%;
+  width: 0%;
+  transition: all 0.3s ease;
+  background: var(--gray-300);
+}
+
+.strength-bar.weak {
+  width: 33%;
+  background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.strength-bar.medium {
+  width: 66%;
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.strength-bar.strong {
+  width: 100%;
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+/* Checkbox Group */
+.checkbox-group {
+  margin-bottom: 1.5rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--gray-700);
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: auto;
+  margin-top: 0.25rem;
+  cursor: pointer;
+  accent-color: #6366f1;
+}
+
+.checkbox-label span {
+  flex: 1;
+}
+
+.checkbox-label a {
+  color: #6366f1;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.checkbox-label a:hover {
+  text-decoration: underline;
+}
+
 /* ============================================
    Forms - Premium Style
    ============================================ */

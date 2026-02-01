@@ -271,15 +271,35 @@ app.post('/api/login', (req, res) => {
 
 app.post('/api/register', (req, res) => {
   try {
-    const { username, password, name, email } = req.body;
+    const { username, password, name, email, phone, department } = req.body;
     
     if (!username || !password || !name || !email) {
-      return res.status(400).json({ error: 'Tutti i campi sono obbligatori' });
+      return res.status(400).json({ error: 'Tutti i campi obbligatori devono essere compilati' });
+    }
+    
+    // Validate username
+    if (username.length < 3) {
+      return res.status(400).json({ error: 'Username deve essere almeno 3 caratteri' });
+    }
+    
+    if (!/^[a-zA-Z0-9._]+$/.test(username)) {
+      return res.status(400).json({ error: 'Username può contenere solo lettere, numeri, punto e underscore' });
+    }
+    
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Email non valida' });
+    }
+    
+    // Validate password
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password deve essere almeno 6 caratteri' });
     }
     
     const hash = bcrypt.hashSync(password, 10);
-    const result = db.prepare('INSERT INTO users (username, password, name, email) VALUES (?, ?, ?, ?)')
-      .run(username, hash, name, email);
+    const result = db.prepare('INSERT INTO users (username, password, name, email, phone, department) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(username, hash, name, email, phone || null, department || null);
     
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
     const token = jwt.sign(
@@ -288,12 +308,26 @@ app.post('/api/register', (req, res) => {
       { expiresIn: '24h' }
     );
     
+    // Crea notifica di benvenuto
+    createNotification(
+      user.id,
+      'Benvenuto in Ferie Pro!',
+      'Il tuo account è stato creato con successo. Hai 26 giorni di ferie disponibili.',
+      'success'
+    );
+    
     res.json({
       token,
       user: { id: user.id, name: user.name, email: user.email, role: user.role }
     });
   } catch (e) {
-    res.status(400).json({ error: 'Username o email già in uso' });
+    if (e.message.includes('UNIQUE constraint failed: users.username')) {
+      return res.status(400).json({ error: 'Username già in uso' });
+    }
+    if (e.message.includes('UNIQUE constraint failed: users.email')) {
+      return res.status(400).json({ error: 'Email già in uso' });
+    }
+    res.status(400).json({ error: 'Errore durante la registrazione' });
   }
 });
 

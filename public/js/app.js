@@ -8,8 +8,10 @@ let user = JSON.parse(localStorage.getItem('user') || 'null');
 
 // DOM Elements
 const loginPage = document.getElementById('login-page');
+const registerPage = document.getElementById('register-page');
 const dashboardPage = document.getElementById('dashboard-page');
 const loginForm = document.getElementById('login-form');
+const registerForm = document.getElementById('register-form');
 const logoutBtn = document.getElementById('logout-btn');
 const userName = document.getElementById('user-name');
 
@@ -48,11 +50,19 @@ function logout() {
 
 function showLogin() {
   loginPage.classList.remove('hidden');
+  registerPage.classList.add('hidden');
+  dashboardPage.classList.add('hidden');
+}
+
+function showRegister() {
+  loginPage.classList.add('hidden');
+  registerPage.classList.remove('hidden');
   dashboardPage.classList.add('hidden');
 }
 
 function showDashboard() {
   loginPage.classList.add('hidden');
+  registerPage.classList.add('hidden');
   dashboardPage.classList.remove('hidden');
   userName.textContent = user.name;
   
@@ -62,6 +72,67 @@ function showDashboard() {
   });
   
   loadDashboard();
+}
+
+// ============================================
+// Validation Functions
+// ============================================
+function validateUsername(username) {
+  if (username.length < 3) {
+    return 'Username deve essere almeno 3 caratteri';
+  }
+  if (!/^[a-zA-Z0-9._]+$/.test(username)) {
+    return 'Username può contenere solo lettere, numeri, punto e underscore';
+  }
+  return null;
+}
+
+function validateEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return 'Email non valida';
+  }
+  return null;
+}
+
+function validatePassword(password) {
+  if (password.length < 6) {
+    return 'Password deve essere almeno 6 caratteri';
+  }
+  return null;
+}
+
+function getPasswordStrength(password) {
+  if (password.length === 0) return 'none';
+  if (password.length < 6) return 'weak';
+  
+  let strength = 0;
+  if (password.length >= 8) strength++;
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+  if (/\d/.test(password)) strength++;
+  if (/[^a-zA-Z0-9]/.test(password)) strength++;
+  
+  if (strength <= 1) return 'weak';
+  if (strength <= 2) return 'medium';
+  return 'strong';
+}
+
+function showError(fieldId, message) {
+  const errorEl = document.getElementById(`error-${fieldId}`);
+  if (errorEl) {
+    errorEl.textContent = message;
+  }
+}
+
+function clearError(fieldId) {
+  const errorEl = document.getElementById(`error-${fieldId}`);
+  if (errorEl) {
+    errorEl.textContent = '';
+  }
+}
+
+function clearAllErrors() {
+  document.querySelectorAll('.form-error').forEach(el => el.textContent = '');
 }
 
 // ============================================
@@ -342,6 +413,151 @@ loginForm.addEventListener('submit', async (e) => {
     showDashboard();
   } catch (e) {
     alert(e.message);
+  }
+});
+
+// Register Form
+registerForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearAllErrors();
+  
+  // Get form values
+  const name = document.getElementById('reg-name').value.trim();
+  const username = document.getElementById('reg-username').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const phone = document.getElementById('reg-phone').value.trim();
+  const department = document.getElementById('reg-department').value;
+  const password = document.getElementById('reg-password').value;
+  const passwordConfirm = document.getElementById('reg-password-confirm').value;
+  const terms = document.getElementById('reg-terms').checked;
+  
+  // Validate
+  let hasErrors = false;
+  
+  if (!name || name.length < 2) {
+    showError('name', 'Nome deve essere almeno 2 caratteri');
+    hasErrors = true;
+  }
+  
+  const usernameError = validateUsername(username);
+  if (usernameError) {
+    showError('username', usernameError);
+    hasErrors = true;
+  }
+  
+  const emailError = validateEmail(email);
+  if (emailError) {
+    showError('email', emailError);
+    hasErrors = true;
+  }
+  
+  const passwordError = validatePassword(password);
+  if (passwordError) {
+    showError('password', passwordError);
+    hasErrors = true;
+  }
+  
+  if (password !== passwordConfirm) {
+    showError('password-confirm', 'Le password non corrispondono');
+    hasErrors = true;
+  }
+  
+  if (!terms) {
+    showError('terms', 'Devi accettare i termini e condizioni');
+    hasErrors = true;
+  }
+  
+  if (hasErrors) return;
+  
+  // Submit
+  try {
+    const data = await api('/register', {
+      method: 'POST',
+      body: JSON.stringify({ 
+        username, 
+        password, 
+        name, 
+        email,
+        phone: phone || undefined,
+        department: department || undefined
+      })
+    });
+    
+    token = data.token;
+    user = data.user;
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    
+    alert('Registrazione completata con successo!');
+    showDashboard();
+  } catch (e) {
+    alert(e.message);
+  }
+});
+
+// Show Register Page
+document.getElementById('show-register').addEventListener('click', (e) => {
+  e.preventDefault();
+  showRegister();
+  registerForm.reset();
+  clearAllErrors();
+});
+
+// Show Login Page
+document.getElementById('show-login').addEventListener('click', (e) => {
+  e.preventDefault();
+  showLogin();
+  loginForm.reset();
+});
+
+// Password Strength Indicator
+document.getElementById('reg-password').addEventListener('input', (e) => {
+  const password = e.target.value;
+  const strengthBar = document.querySelector('.strength-bar');
+  const strength = getPasswordStrength(password);
+  
+  strengthBar.className = 'strength-bar';
+  if (strength !== 'none') {
+    strengthBar.classList.add(strength);
+  }
+});
+
+// Real-time validation
+document.getElementById('reg-username').addEventListener('blur', (e) => {
+  const error = validateUsername(e.target.value.trim());
+  if (error) {
+    showError('username', error);
+  } else {
+    clearError('username');
+  }
+});
+
+document.getElementById('reg-email').addEventListener('blur', (e) => {
+  const error = validateEmail(e.target.value.trim());
+  if (error) {
+    showError('email', error);
+  } else {
+    clearError('email');
+  }
+});
+
+document.getElementById('reg-password').addEventListener('blur', (e) => {
+  const error = validatePassword(e.target.value);
+  if (error) {
+    showError('password', error);
+  } else {
+    clearError('password');
+  }
+});
+
+document.getElementById('reg-password-confirm').addEventListener('blur', (e) => {
+  const password = document.getElementById('reg-password').value;
+  const confirm = e.target.value;
+  
+  if (confirm && password !== confirm) {
+    showError('password-confirm', 'Le password non corrispondono');
+  } else {
+    clearError('password-confirm');
   }
 });
 
