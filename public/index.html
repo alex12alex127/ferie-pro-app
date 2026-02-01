@@ -46,6 +46,7 @@
       <!-- Navigation -->
       <nav class="nav">
         <button class="nav-btn active" data-page="home">Home</button>
+        <button class="nav-btn" data-page="profile">Il Mio Profilo</button>
         <button class="nav-btn" data-page="requests">Richieste</button>
         <button class="nav-btn" data-page="new-request">Nuova Richiesta</button>
         <button class="nav-btn admin-only" data-page="admin">Admin</button>
@@ -79,6 +80,73 @@
             <div class="progress-bar">
               <div class="progress" id="days-progress"></div>
             </div>
+          </div>
+        </section>
+
+        <!-- Profile Section (Dipendente) -->
+        <section id="profile-section" class="section hidden">
+          <h2>Il Mio Profilo</h2>
+          
+          <div class="profile-grid">
+            <!-- Info Card -->
+            <div class="card profile-card">
+              <div class="profile-avatar" id="profile-avatar">
+                <span id="profile-initials"></span>
+              </div>
+              <h3 id="profile-name"></h3>
+              <p class="profile-role" id="profile-role"></p>
+              <p class="profile-email" id="profile-email"></p>
+            </div>
+
+            <!-- Days Card -->
+            <div class="card">
+              <h3>Situazione Ferie</h3>
+              <div class="days-detail">
+                <div class="days-row">
+                  <span>Giorni Totali</span>
+                  <strong id="profile-total-days">26</strong>
+                </div>
+                <div class="days-row">
+                  <span>Giorni Usati</span>
+                  <strong id="profile-used-days">0</strong>
+                </div>
+                <div class="days-row highlight">
+                  <span>Giorni Disponibili</span>
+                  <strong id="profile-available-days">26</strong>
+                </div>
+              </div>
+              <div class="progress-bar large">
+                <div class="progress" id="profile-progress"></div>
+              </div>
+              <p class="progress-label">
+                <span id="profile-percent">0</span>% utilizzato
+              </p>
+            </div>
+
+            <!-- Stats Card -->
+            <div class="card">
+              <h3>Le Mie Statistiche</h3>
+              <div class="mini-stats">
+                <div class="mini-stat">
+                  <span class="mini-stat-value" id="profile-stat-total">0</span>
+                  <span class="mini-stat-label">Richieste Totali</span>
+                </div>
+                <div class="mini-stat">
+                  <span class="mini-stat-value" id="profile-stat-pending">0</span>
+                  <span class="mini-stat-label">In Attesa</span>
+                </div>
+                <div class="mini-stat">
+                  <span class="mini-stat-value" id="profile-stat-approved">0</span>
+                  <span class="mini-stat-label">Approvate</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Requests -->
+          <div class="card" style="margin-top: 1.5rem;">
+            <h3>Ultime Richieste</h3>
+            <div id="profile-recent-requests" class="recent-requests"></div>
           </div>
         </section>
 

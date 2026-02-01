@@ -81,6 +81,7 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     
     // Load data
     if (page === 'home') loadStats();
+    if (page === 'profile') loadProfilePage();
     if (page === 'requests') loadRequests();
     if (page === 'admin') loadAdminData();
   });
@@ -129,6 +130,64 @@ async function loadProfile() {
     document.getElementById('days-progress').style.width = `${percent}%`;
   } catch (e) {
     console.error('Error loading profile:', e);
+  }
+}
+
+async function loadProfilePage() {
+  try {
+    const [profile, stats, requests] = await Promise.all([
+      api('/profile'),
+      api('/stats'),
+      api('/requests')
+    ]);
+    
+    // Profile Info
+    const initials = profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    document.getElementById('profile-initials').textContent = initials;
+    document.getElementById('profile-name').textContent = profile.name;
+    document.getElementById('profile-role').textContent = getRoleLabel(profile.role);
+    document.getElementById('profile-email').textContent = profile.email;
+    
+    // Days Info
+    const available = profile.total_days - profile.used_days;
+    const percent = Math.round((profile.used_days / profile.total_days) * 100);
+    
+    document.getElementById('profile-total-days').textContent = profile.total_days;
+    document.getElementById('profile-used-days').textContent = profile.used_days;
+    document.getElementById('profile-available-days').textContent = available;
+    document.getElementById('profile-progress').style.width = `${percent}%`;
+    document.getElementById('profile-percent').textContent = percent;
+    
+    // Stats
+    document.getElementById('profile-stat-total').textContent = stats.total;
+    document.getElementById('profile-stat-pending').textContent = stats.pending;
+    document.getElementById('profile-stat-approved').textContent = stats.approved;
+    
+    // Recent Requests (last 5)
+    const recent = requests.slice(0, 5);
+    const container = document.getElementById('profile-recent-requests');
+    
+    if (recent.length === 0) {
+      container.innerHTML = '<p style="color: var(--gray-500); text-align: center; padding: 1rem;">Nessuna richiesta</p>';
+      return;
+    }
+    
+    container.innerHTML = recent.map(r => `
+      <div class="recent-request-item">
+        <div class="recent-request-info">
+          <div class="recent-request-type ${r.type.toLowerCase()}">
+            ${getTypeIcon(r.type)}
+          </div>
+          <div class="recent-request-details">
+            <h4>${r.type} - ${r.days} giorn${r.days === 1 ? 'o' : 'i'}</h4>
+            <p>${formatDate(r.start_date)} - ${formatDate(r.end_date)}</p>
+          </div>
+        </div>
+        <span class="status status-${r.status}">${statusLabel(r.status)}</span>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error('Error loading profile page:', e);
   }
 }
 
@@ -238,6 +297,24 @@ function statusLabel(status) {
     rejected: 'Rifiutata'
   };
   return labels[status] || status;
+}
+
+function getRoleLabel(role) {
+  const labels = {
+    admin: 'Amministratore',
+    manager: 'Responsabile',
+    employee: 'Dipendente'
+  };
+  return labels[role] || role;
+}
+
+function getTypeIcon(type) {
+  const icons = {
+    'Ferie': '🏖️',
+    'Permesso': '🕐',
+    'Malattia': '🏥'
+  };
+  return icons[type] || '📋';
 }
 
 // ============================================

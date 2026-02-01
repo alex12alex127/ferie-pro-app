@@ -434,6 +434,176 @@ body {
 }
 
 /* ============================================
+   Profile Page
+   ============================================ */
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.profile-card {
+  text-align: center;
+  padding: 2rem;
+}
+
+.profile-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+}
+
+.profile-avatar span {
+  color: white;
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+.profile-card h3 {
+  font-size: 1.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.profile-role {
+  color: var(--primary);
+  font-weight: 500;
+  text-transform: capitalize;
+  margin-bottom: 0.5rem;
+}
+
+.profile-email {
+  color: var(--gray-500);
+  font-size: 0.9rem;
+}
+
+/* Days Detail */
+.days-detail {
+  margin: 1.5rem 0;
+}
+
+.days-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.days-row:last-child {
+  border-bottom: none;
+}
+
+.days-row.highlight {
+  background: var(--gray-50);
+  margin: 0 -1.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius);
+}
+
+.days-row.highlight strong {
+  color: var(--success);
+  font-size: 1.25rem;
+}
+
+.progress-bar.large {
+  height: 12px;
+  margin-top: 1rem;
+}
+
+.progress-label {
+  text-align: center;
+  margin-top: 0.5rem;
+  color: var(--gray-500);
+  font-size: 0.875rem;
+}
+
+/* Mini Stats */
+.mini-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.mini-stat {
+  text-align: center;
+  padding: 1rem;
+  background: var(--gray-50);
+  border-radius: var(--radius);
+}
+
+.mini-stat-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.mini-stat-label {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+}
+
+/* Recent Requests */
+.recent-requests {
+  margin-top: 1rem;
+}
+
+.recent-request-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.recent-request-item:last-child {
+  border-bottom: none;
+}
+
+.recent-request-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.recent-request-type {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.recent-request-type.ferie {
+  background: #dbeafe;
+}
+
+.recent-request-type.permesso {
+  background: #fef3c7;
+}
+
+.recent-request-type.malattia {
+  background: #fee2e2;
+}
+
+.recent-request-details h4 {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.recent-request-details p {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+}
+
+/* ============================================
    Responsive
    ============================================ */
 @media (max-width: 768px) {
