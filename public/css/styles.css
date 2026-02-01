@@ -43,7 +43,8 @@ body {
 /* ============================================
    Login Page - Premium Style
    ============================================ */
-#login-page {
+#login-page,
+#register-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -51,9 +52,11 @@ body {
   background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
   position: relative;
   overflow: hidden;
+  padding: 2rem 1rem;
 }
 
-#login-page::before {
+#login-page::before,
+#register-page::before {
   content: '';
   position: absolute;
   width: 500px;
@@ -64,7 +67,8 @@ body {
   animation: pulse 4s ease-in-out infinite;
 }
 
-#login-page::after {
+#login-page::after,
+#register-page::after {
   content: '';
   position: absolute;
   width: 400px;
@@ -145,11 +149,16 @@ body {
 
 /* Register Container */
 .register-container {
-  max-width: 520px;
+  max-width: 540px;
+  margin: 0 auto;
 }
 
 .register-container h1 {
   font-size: 1.75rem;
+}
+
+.register-container .form-group {
+  margin-bottom: 1rem;
 }
 
 /* Form Hints & Errors */
