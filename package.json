@@ -1,13 +1,11 @@
 {
-  "name": "portal-manager",
-  "version": "1.0.0",
-  "description": "Portal Manager - Gestione aziendale completa",
+  "name": "ferie-pro",
+  "version": "2.0.0",
+  "description": "Gestione Ferie e Permessi",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
-    "build": "echo 'No build step required for this project'",
-    "test": "echo 'Error: no test specified' && exit 1"
+    "dev": "node server.js"
   },
   "dependencies": {
     "express": "^4.19.2",

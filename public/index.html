@@ -3,44 +3,142 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Portal Manager - Accedi</title>
+  <title>Ferie Pro</title>
   <link rel="stylesheet" href="/css/styles.css">
 </head>
-<body class="login-page">
-  <div class="card login-card">
-    <h1>Portal Manager</h1>
-    <p>Gestione Aziendale Intelligente</p>
-    
-    <div id="login-alert" class="alert alert-error hidden"></div>
-    
-    <form id="login-form">
-      <div class="form-group">
-        <label>Username</label>
-        <input type="text" id="username" required placeholder="Inserisci il tuo username">
+<body>
+  <div id="app">
+    <!-- Login Page -->
+    <div id="login-page" class="page">
+      <div class="login-container">
+        <h1>Ferie Pro</h1>
+        <p class="subtitle">Gestione Ferie e Permessi</p>
+        
+        <form id="login-form">
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" required autocomplete="username">
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" required autocomplete="current-password">
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Accedi</button>
+        </form>
+        
+        <p class="login-hint">Demo: admin / admin123</p>
       </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="password" required placeholder="Inserisci la password">
-      </div>
-      <button type="submit">Accedi</button>
-    </form>
-    
-    <p style="text-align:center;margin-top:24px;font-size:14px;color:var(--text-muted)">
-      Non hai un account? <a href="/register.html">Registrati ora</a>
-    </p>
-    
-    <div class="demo-info">
-      <strong>Account Demo</strong>
-      <ul>
-        <li><b>admin</b> / admin123</li>
-        <li><b>manager</b> / manager123</li>
-        <li><b>tecnico</b> / tec123</li>
-      </ul>
+    </div>
+
+    <!-- Dashboard Page -->
+    <div id="dashboard-page" class="page hidden">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <h1>Ferie Pro</h1>
+        </div>
+        <div class="header-right">
+          <span id="user-name"></span>
+          <button id="logout-btn" class="btn btn-outline">Esci</button>
+        </div>
+      </header>
+
+      <!-- Navigation -->
+      <nav class="nav">
+        <button class="nav-btn active" data-page="home">Home</button>
+        <button class="nav-btn" data-page="requests">Richieste</button>
+        <button class="nav-btn" data-page="new-request">Nuova Richiesta</button>
+        <button class="nav-btn admin-only" data-page="admin">Admin</button>
+      </nav>
+
+      <!-- Main Content -->
+      <main class="main">
+        <!-- Home Section -->
+        <section id="home-section" class="section">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value" id="stat-total">0</div>
+              <div class="stat-label">Totali</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="stat-pending">0</div>
+              <div class="stat-label">In Attesa</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="stat-approved">0</div>
+              <div class="stat-label">Approvate</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Giorni Disponibili</h2>
+            <div class="days-info">
+              <span class="days-available" id="days-available">26</span>
+              <span class="days-label">giorni rimanenti</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress" id="days-progress"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Requests Section -->
+        <section id="requests-section" class="section hidden">
+          <h2>Le Mie Richieste</h2>
+          <div id="requests-list" class="requests-list"></div>
+        </section>
+
+        <!-- New Request Section -->
+        <section id="new-request-section" class="section hidden">
+          <h2>Nuova Richiesta</h2>
+          <form id="request-form" class="card">
+            <div class="form-group">
+              <label for="req-type">Tipo</label>
+              <select id="req-type">
+                <option value="Ferie">Ferie</option>
+                <option value="Permesso">Permesso</option>
+                <option value="Malattia">Malattia</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="req-start">Data Inizio</label>
+                <input type="date" id="req-start" required>
+              </div>
+              <div class="form-group">
+                <label for="req-end">Data Fine</label>
+                <input type="date" id="req-end" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="req-reason">Motivo (opzionale)</label>
+              <textarea id="req-reason" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Invia Richiesta</button>
+          </form>
+        </section>
+
+        <!-- Admin Section -->
+        <section id="admin-section" class="section hidden">
+          <h2>Pannello Admin</h2>
+          
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="pending-requests">Richieste in Attesa</button>
+            <button class="tab-btn" data-tab="all-users">Utenti</button>
+          </div>
+
+          <div id="pending-requests-tab" class="tab-content">
+            <div id="admin-requests-list" class="requests-list"></div>
+          </div>
+
+          <div id="all-users-tab" class="tab-content hidden">
+            <div id="users-list" class="users-list"></div>
+          </div>
+        </section>
+      </main>
     </div>
   </div>
-  
-  <script src="/js/auth.js"></script>
+
   <script src="/js/app.js"></script>
-  <script>initLogin();</script>
 </body>
 </html>

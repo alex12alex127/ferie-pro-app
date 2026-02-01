@@ -1,1621 +1,306 @@
+// ============================================
+// Ferie Pro - Main Application
+// ============================================
+
+// State
+let token = localStorage.getItem('token');
+let user = JSON.parse(localStorage.getItem('user') || 'null');
+
+// DOM Elements
+const loginPage = document.getElementById('login-page');
+const dashboardPage = document.getElementById('dashboard-page');
+const loginForm = document.getElementById('login-form');
+const logoutBtn = document.getElementById('logout-btn');
+const userName = document.getElementById('user-name');
+
+// ============================================
 // API Helper
-const API = {
-  async req(m, u, b) {
-    const r = await fetch(u, { method: m, headers: Auth.authHeaders(), body: b ? JSON.stringify(b) : undefined });
-    if (r.status === 401) { Auth.logout(); return; }
-    return r.headers.get('content-type')?.includes('json') ? r.json() : r.text();
-  },
-  get: u => API.req('GET', u),
-  post: (u, b) => API.req('POST', u, b),
-  patch: (u, b) => API.req('PATCH', u, b),
-  delete: u => API.req('DELETE', u)
-};
-
-const $ = s => document.querySelector(s);
-const $$ = s => document.querySelectorAll(s);
-const esc = s => { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; };
-const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
-const badge = s => s === 'Approvata' || s === 'Consegnato' ? 'badge-approved' : s === 'Rifiutata' ? 'badge-rejected' : 'badge-pending';
-const fmtDate = d => d ? new Date(d).toLocaleDateString('it-IT') : '-';
-const isExpiring = d => { if (!d) return false; const diff = (new Date(d) - new Date()) / (1000 * 60 * 60 * 24); return diff < 30 && diff > 0; };
-const isExpired = d => d && new Date(d) < new Date();
-
-// Gap tra le fette (effetto "fetta di torta") in radianti
-const PIE_GAP = 0.02;
-
-function drawDonutSlice(ctx, cx, cy, rOuter, rInner, start, end, color, stroke) {
-  ctx.beginPath();
-  ctx.arc(cx, cy, rOuter, start, end);
-  ctx.arc(cx, cy, rInner, end, start, true);
-  ctx.closePath();
-  ctx.fillStyle = color;
-  ctx.fill();
-  if (stroke) {
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  }
-}
-
-// Grafico a torta ferie (donut, fette distinte)
-function createFeriePieChart(totalDays, usedDays) {
-  const canvas = $('#ferie-pie-chart');
-  const centerEl = $('#pie-center-num');
-  if (!canvas) return;
-  const remainingDays = Math.max(0, totalDays - usedDays);
-  if (centerEl) centerEl.textContent = remainingDays;
-  $('#remaining-days').textContent = remainingDays;
-  $('#used-days').textContent = usedDays;
-  $('#total-days').textContent = totalDays;
-
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width;
-  const h = canvas.height;
-  const cx = w / 2;
-  const cy = h / 2;
-  const r = Math.min(w, h) / 2 - 12;
-  const rInner = r * 0.55;
-  ctx.clearRect(0, 0, w, h);
-
-  if (totalDays === 0) {
-    drawDonutSlice(ctx, cx, cy, r, rInner, 0, Math.PI * 2, '#eef2f7', null);
-    return;
-  }
-  const usedPct = usedDays / totalDays;
-  const remPct = remainingDays / totalDays;
-  const n = (usedDays > 0 ? 1 : 0) + (remainingDays > 0 ? 1 : 0) || 1;
-  let start = -Math.PI / 2;
-  const full = Math.PI * 2 - n * PIE_GAP;
-
-  if (usedDays > 0 && usedPct > 0.001) {
-    const sweep = full * usedPct;
-    drawDonutSlice(ctx, cx, cy, r, rInner, start, start + sweep, '#dc2626', 'rgba(255,255,255,0.4)');
-    start += sweep + PIE_GAP;
-  }
-  if (remainingDays > 0 && remPct > 0.001) {
-    const sweep = full * remPct;
-    drawDonutSlice(ctx, cx, cy, r, rInner, start, start + sweep, '#059669', 'rgba(255,255,255,0.4)');
-  }
-}
-
-// Grafico a torta richieste (manager): In attesa, Approvate, Rifiutate
-function createRequestsPieChart(stats) {
-  const canvas = $('#requests-pie-chart');
-  const totalEl = $('#requests-pie-total');
-  if (!canvas) return;
-  const total = stats.total || 0;
-  const pending = stats.pending || 0;
-  const approved = stats.approved || 0;
-  const rejected = stats.rejected || 0;
-  if (totalEl) totalEl.textContent = total;
-  $('#kpi-pending').textContent = pending;
-  $('#kpi-approved').textContent = approved;
-  $('#kpi-rejected').textContent = rejected;
-  $('#kpi-month').textContent = stats.thisMonth ?? 0;
-
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width;
-  const h = canvas.height;
-  const cx = w / 2;
-  const cy = h / 2;
-  const r = Math.min(w, h) / 2 - 10;
-  const rInner = r * 0.5;
-  ctx.clearRect(0, 0, w, h);
-
-  const items = [
-    { v: pending, c: '#d97706' },
-    { v: approved, c: '#059669' },
-    { v: rejected, c: '#dc2626' }
-  ].filter(x => x.v > 0);
-  if (items.length === 0) {
-    drawDonutSlice(ctx, cx, cy, r, rInner, 0, Math.PI * 2, '#eef2f7', null);
-    return;
-  }
-  let start = -Math.PI / 2;
-  const n = items.length;
-  const full = Math.PI * 2 - n * PIE_GAP;
-  items.forEach((x) => {
-    const pct = x.v / total;
-    const sweep = full * pct;
-    drawDonutSlice(ctx, cx, cy, r, rInner, start, start + sweep, x.c, 'rgba(255,255,255,0.5)');
-    start += sweep + PIE_GAP;
-  });
-}
-
-// SVG Icons (Lucide-style)
-const icons = {
-  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
-  plane: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>',
-  calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>',
-  building: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>',
-  megaphone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>',
-  settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>',
-  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
-  x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
-  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>',
-  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>',
-  refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>',
-  download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>',
-  users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-  chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/></svg>',
-  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-  sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>',
-  alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>',
-  logout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>',
-  chevronLeft: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>',
-  chevronRight: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
-  menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>',
-  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>',
-  user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>',
-  mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>',
-  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
-  save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>',
-  hardhat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2z"/><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M4 15v-3a6 6 0 0 1 6-6"/><path d="M14 6a6 6 0 0 1 6 6v3"/></svg>',
-  shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>',
-  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
-  download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>',
-  upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>'
-};
-
-// Avatar icons – tema elettricista (tutti gli utenti possono sceglierne una)
-const avatarIcons = {
-  wrench: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>', label: 'Chiave' },
-  screwdriver: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 11-6-6"/><path d="m6 15 6 6"/><path d="m14 5 4 4"/></svg>', label: 'Cacciavite' },
-  plug: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></svg>', label: 'Spina' },
-  lightbulb: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>', label: 'Lampadina' },
-  zap: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>', label: 'Fulmine' },
-  cable: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9a2 2 0 0 1-2-2V5h6v2a2 2 0 0 1-2 2Z"/><path d="M4 15a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2H4Z"/><path d="M20 15V9a2 2 0 0 0-2-2h-2"/><path d="M4 15h16"/></svg>', label: 'Cavo' },
-  hardhat: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2z"/><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M4 15v-3a6 6 0 0 1 6-6"/><path d="M14 6a6 6 0 0 1 6 6v3"/></svg>', label: 'Casco' },
-  drill: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 10v4"/><path d="M10 10v4"/><path d="M12 8v8"/><path d="M8 14h8"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m6 6 1.5 1.5"/><path d="m16.5 16.5 1.5 1.5"/><path d="M6 18 4 20"/><path d="M18 6l2 2"/></svg>', label: 'Trapano' },
-  ruler: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 6 18"/><path d="M3 21 18 6"/><path d="M7 3v4"/><path d="M11 3v4"/><path d="M15 3v4"/><path d="M19 3v4"/><path d="M3 7h4"/><path d="M3 11h4"/><path d="M3 15h4"/><path d="M3 19h4"/></svg>', label: 'Metro' },
-  battery: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="10" x="2" y="7" rx="2" ry="2"/><line x1="22" x2="22" y1="11" y2="13"/></svg>', label: 'Batteria' },
-  switch: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9h12a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1Z"/><path d="M9 10v4"/><path d="M15 10v4"/></svg>', label: 'Interruttore' },
-  fuse: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="12" height="16" x="6" y="6" rx="1"/><path d="M10 10h4"/><path d="M10 14h4"/></svg>', label: 'Fusibile' },
-  voltmeter: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="m16.24 16.24 2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="m16.24 7.76 2.83-2.83"/><circle cx="12" cy="12" r="4"/><path d="M12 10v4"/><path d="m10 12 2 2 2-2"/></svg>', label: 'Multimetro' },
-  coil: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6c.5 1 2 4 5 4s4.5-3 5-4"/><path d="M3 10c.5 1 2 4 5 4s4.5-3 5-4"/><path d="M3 14c.5 1 2 4 5 4s4.5-3 5-4"/><path d="M3 18c.5 1 2 4 5 4s4.5-3 5-4"/><path d="M21 6c-.5 1-2 4-5 4s-4.5-3-5-4"/><path d="M21 10c-.5 1-2 4-5 4s-4.5-3-5-4"/><path d="M21 14c-.5 1-2 4-5 4s-4.5-3-5-4"/><path d="M21 18c-.5 1-2 4-5 4s-4.5-3-5-4"/></svg>', label: 'Bobina' },
-  outlet: { svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 8v2"/><path d="M12 8v4"/><path d="M17 8v2"/></svg>', label: 'Presa' }
-};
-
-const avatarIconKeys = Object.keys(avatarIcons);
-const icon = (name, size = 18) => `<span class="icon" style="width:${size}px;height:${size}px">${icons[name] || ''}</span>`;
-const avatarIconHtml = (key, size = 32) => {
-  const t = avatarIcons[key];
-  return t ? `<span class="avatar-icon" style="width:${size}px;height:${size}px" data-key="${key}" title="${esc(t.label)}">${t.svg}</span>` : '';
-};
-
-// Toggle mobile menu
-function toggleMenu() {
-  $('#sidebar')?.classList.toggle('open');
-  $('#overlay')?.classList.toggle('open');
-}
-
-// Sidebar collapse: solo icone quando ristretto, click icona ricompare la barra
-const SIDEBAR_COLLAPSED_KEY = 'sidebarCollapsed';
-function isSidebarCollapsed() {
-  return $('#sidebar')?.classList.contains('collapsed');
-}
-function collapseSidebar() {
-  const s = $('#sidebar');
-  if (s) {
-    s.classList.add('collapsed');
-    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, '1');
-  }
-}
-function expandSidebar() {
-  const s = $('#sidebar');
-  if (s) {
-    s.classList.remove('collapsed');
-    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, '0');
-  }
-}
-function toggleSidebar() {
-  const s = $('#sidebar');
-  if (!s) return;
-  if (s.classList.contains('collapsed')) {
-    expandSidebar();
-  } else {
-    collapseSidebar();
-  }
-}
-function initSidebarCollapse() {
-  const sidebar = $('#sidebar');
-  if (!sidebar) return;
-  if (localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1') sidebar.classList.add('collapsed');
-  if (!$('#sidebar-toggle')) {
-    const btn = document.createElement('button');
-    btn.id = 'sidebar-toggle';
-    btn.className = 'sidebar-toggle';
-    btn.setAttribute('aria-label', 'Restringi/Espandi barra');
-    btn.innerHTML = `<span class="icon sidebar-toggle-icon" style="width:20px;height:20px">${icons.chevronLeft}</span>`;
-    btn.onclick = () => {
-      toggleSidebar();
-      btn.title = isSidebarCollapsed() ? 'Espandi barra' : 'Restringi barra';
-    };
-    sidebar.appendChild(btn);
-  }
-  const tb = $('#sidebar-toggle');
-  if (tb) tb.title = isSidebarCollapsed() ? 'Espandi barra' : 'Restringi barra';
-  const nav = $('#main-nav');
-  if (nav && !nav.dataset.collapseInit) {
-    nav.dataset.collapseInit = '1';
-    nav.addEventListener('click', (e) => {
-      const a = e.target.closest('a[href^="/"]');
-      if (a && isSidebarCollapsed()) {
-        e.preventDefault();
-        expandSidebar();
-        window.location.href = a.getAttribute('href');
-      }
-    });
-  }
-}
-
-// Load company logo
-async function loadCompanyLogo() {
-  try {
-    const res = await fetch('/api/settings/logo');
-    const data = await res.json();
-    const logo = $('#company-logo');
-    const frame = $('#logo-frame');
-    if (data?.hasLogo && data?.logoUrl) {
-      if (logo) logo.src = data.logoUrl;
-      if (frame) frame.style.display = 'flex';
-    } else {
-      if (frame) frame.style.display = 'none';
-    }
-  } catch {}
-}
-// Auto-load logo on page load
-document.addEventListener('DOMContentLoaded', loadCompanyLogo);
-
-// NAV
-function renderNav(active, hasNotifications = false) {
-  const nav = $('#main-nav'), user = Auth.getUser();
-  if (!nav || !user) return;
-  const isM = ['manager', 'admin'].includes(user.role), isA = user.role === 'admin';
+// ============================================
+async function api(endpoint, options = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
   
-  const sections = [
-    { title: 'Principale', items: [
-      { k: 'dashboard', l: 'Dashboard', h: '/dashboard.html', i: 'home', dot: hasNotifications },
-      { k: 'request', l: 'Richiedi Ferie', h: '/request.html', i: 'plane' },
-      { k: 'calendar', l: 'Calendario', h: '/calendar.html', i: 'calendar' },
-    ]},
-    { title: 'Account', items: [
-      { k: 'settings', l: 'Impostazioni', h: '/settings.html', i: 'user' },
-      { k: 'admin', l: 'Admin', h: '/admin.html', i: 'settings', a: true },
-    ]}
-  ];
-  
-  let html = '';
-  sections.forEach(sec => {
-    const visibleItems = sec.items.filter(i => (!i.m && !i.a) || (i.m && isM) || (i.a && isA));
-    if (visibleItems.length) {
-      html += `<div class="nav-section"><div class="nav-section-title">${sec.title}</div>`;
-      visibleItems.forEach(i => {
-        const dot = i.dot ? '<span class="nav-dot"></span>' : '';
-        html += `<a href="${i.h}" class="${i.k === active ? 'active' : ''}" onclick="toggleMenu()">${icon(i.i, 20)}<span>${i.l}</span>${dot}</a>`;
-      });
-      html += '</div>';
-    }
-  });
-  nav.innerHTML = html;
-  
-  // User info in sidebar
-  const userName = $('#user-name'), userRole = $('#user-role');
-  if (userName) userName.textContent = user.name;
-  if (userRole) userRole.textContent = user.role === 'admin' ? 'Amministratore' : user.role === 'manager' ? 'Responsabile' : 'Dipendente';
-
-  initSidebarCollapse();
-}
-
-// Check avvisi count for nav dot
-async function checkAvvisi() {
-  try {
-    const avvisi = await API.get('/api/avvisi') || [];
-    return avvisi.length > 0;
-  } catch { return false; }
-}
-
-// LOGIN
-function initLogin() {
-  if (Auth.isLoggedIn()) { Auth.redirectByRole(); return; }
-  $('#login-form').addEventListener('submit', async e => {
-    e.preventDefault();
-    const alert = $('#login-alert');
-    alert.classList.add('hidden');
-    try { await Auth.login($('#username').value.trim(), $('#password').value.trim()); Auth.redirectByRole(); }
-    catch (err) { alert.textContent = err.message; alert.classList.remove('hidden'); }
-  });
-}
-
-// REGISTER
-async function initRegister() {
-  if (Auth.isLoggedIn()) { Auth.redirectByRole(); return; }
-  
-  // Carica sedi
-  const sedi = await fetch('/api/sedi').then(r => r.json());
-  const sedeSelect = $('#reg-sede');
-  sedeSelect.innerHTML = '<option value="">Seleziona la tua sede...</option>' + sedi.map(s => `<option value="${s.id}">${esc(s.nome)}</option>`).join('');
-  
-  $('#register-form').addEventListener('submit', async e => {
-    e.preventDefault();
-    const alert = $('#register-alert');
-    alert.classList.add('hidden');
-    const [u, n, em, sede, p, c] = ['#reg-username', '#reg-name', '#reg-email', '#reg-sede', '#reg-password', '#reg-confirm'].map(s => $(s).value.trim());
-    if (!sede) { alert.textContent = 'Seleziona una sede'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); return; }
-    if (p !== c) { alert.textContent = 'Le password non coincidono'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); return; }
-    try {
-      const res = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, name: n, email: em, password: p, sede_id: parseInt(sede) }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      Auth.setAuth(data.token, data.user);
-      alert.textContent = 'Registrazione completata!'; alert.className = 'alert alert-success'; alert.classList.remove('hidden');
-      setTimeout(() => Auth.redirectByRole(), 1000);
-    } catch (err) { alert.textContent = err.message; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
-  });
-}
-
-// REQUEST (Ferie)
-async function initRequest() {
-  if (!Auth.requireAuth()) return;
-  renderNav('request');
-  const user = Auth.getUser(), form = $('#request-form'), alert = $('#request-alert'), list = $('#my-requests');
-  const tipoSelect = $('#tipo-select'), malattiaSection = $('#malattia-section'), codiceMalattia = $('#codice-malattia'), noteSection = $('#note-section');
-  
-  form.nome.value = user.name; form.email.value = user.email;
-  
-  // Toggle codice malattia e note
-  tipoSelect.addEventListener('change', () => {
-    if (tipoSelect.value === 'Malattia') {
-      malattiaSection.classList.remove('hidden');
-      noteSection.classList.add('hidden');
-      codiceMalattia.required = true;
-      form.motivo.value = '';
-    } else {
-      malattiaSection.classList.add('hidden');
-      noteSection.classList.remove('hidden');
-      codiceMalattia.required = false;
-      codiceMalattia.value = '';
-    }
+  const res = await fetch(`/api${endpoint}`, {
+    ...options,
+    headers: { ...headers, ...options.headers }
   });
   
-  const updateDays = () => {
-    const [s, e] = [form.inizio.value, form.fine.value];
-    if (s && e) {
-      let c = 0, cur = new Date(s);
-      while (cur <= new Date(e)) { if (cur.getDay() % 6 !== 0) c++; cur.setDate(cur.getDate() + 1); }
-      $('#giorni-calc').textContent = `${c || 1} giorni lavorativi`;
-    }
-  };
-  form.inizio.addEventListener('change', updateDays);
-  form.fine.addEventListener('change', updateDays);
-  form.addEventListener('submit', async e => {
-    e.preventDefault(); alert.classList.add('hidden');
-    const payload = { nome: form.nome.value, email: form.email.value, inizio: form.inizio.value, fine: form.fine.value, tipo: form.tipo.value, urgenza: form.urgenza.value, motivo: form.motivo?.value };
-    // Aggiungi codice malattia se presente
-    if (form.tipo.value === 'Malattia') {
-      if (!codiceMalattia.value.trim()) { alert.textContent = 'Inserisci il numero di protocollo'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); return; }
-      payload.codice_malattia = codiceMalattia.value.trim();
-    }
-    if (!payload.inizio || !payload.fine || payload.fine < payload.inizio) { alert.textContent = 'Date non valide'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); return; }
-    try { await API.post('/api/requests', payload); alert.textContent = 'Richiesta inviata!'; alert.className = 'alert alert-success'; alert.classList.remove('hidden'); form.reset(); form.nome.value = user.name; form.email.value = user.email; malattiaSection.classList.add('hidden'); load(); }
-    catch { alert.textContent = 'Errore'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
-  });
-  async function load() {
-    const data = await API.get('/api/requests') || [];
-    list.innerHTML = data.length ? data.map(r => `<tr><td><b>${esc(r.inizio)}</b> → ${esc(r.fine)}</td><td>${esc(r.tipo)}</td><td>${r.giorni}g</td><td><span class="badge ${badge(r.stato)}">${esc(r.stato)}</span></td></tr>`).join('') : '<tr><td colspan="4">Nessuna richiesta.</td></tr>';
+  if (res.status === 401) {
+    logout();
+    throw new Error('Sessione scaduta');
   }
-  load();
+  
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Errore');
+  return data;
 }
 
-// DASHBOARD (unificata con Profilo e Avvisi)
-async function initDashboard() {
-  if (!Auth.requireAuth()) return;
-  
-  const user = Auth.getUser();
-  const isM = ['manager', 'admin'].includes(user.role);
-  
-  // Carica avvisi prima per il dot
-  const avvisi = await API.get('/api/avvisi') || [];
-  renderNav('dashboard', avvisi.length > 0);
-  
-  // Saluto dinamico
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Buongiorno' : hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
-  $('#greeting').textContent = `${greeting}, ${user.name.split(' ')[0]}`;
-  
-  // Mostra avvisi se presenti
-  if (avvisi.length > 0) {
-    $('#avvisi-section').classList.remove('hidden');
-    renderAvvisi(avvisi);
-  }
-  
-  // Toggle avvisi
-  let avvisiVisible = true;
-  $('#btn-toggle-avvisi')?.addEventListener('click', () => {
-    avvisiVisible = !avvisiVisible;
-    $('#avvisi-list').style.display = avvisiVisible ? 'block' : 'none';
-    $('#btn-toggle-avvisi').textContent = avvisiVisible ? 'Nascondi' : 'Mostra';
-  });
-  
-  function renderAvvisi(list) {
-    const prioColor = p => p === 'Urgente' ? 'var(--danger)' : p === 'Alta' ? 'var(--warning)' : 'var(--primary)';
-    const prioIcon = p => p === 'Urgente' ? '🔴' : p === 'Alta' ? '🟡' : '🔵';
-    $('#avvisi-list').innerHTML = list.map(a => `
-      <div style="padding:12px;margin-bottom:8px;background:var(--bg-glass);border-radius:var(--radius-xs);border-left:3px solid ${prioColor(a.priorita)}">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
-          <div style="flex:1">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-              <span style="font-size:12px">${prioIcon(a.priorita)}</span>
-              <b style="font-size:13px">${esc(a.titolo)}</b>
-            </div>
-            <p style="margin:0;color:var(--text-secondary);font-size:12px;line-height:1.5">${esc(a.messaggio)}</p>
-            <small style="color:var(--text-muted);font-size:11px">${fmtDate(a.created_at)}</small>
-          </div>
-          ${isM ? `<button class="btn-sm btn-ghost" onclick="delAvviso(${a.id})" style="padding:4px 8px;font-size:14px">×</button>` : ''}
-        </div>
-      </div>
-    `).join('');
-  }
-  
-  window.delAvviso = async id => { 
-    if (confirm('Eliminare avviso?')) { 
-      await API.delete(`/api/avvisi/${id}`); 
-      const newAvvisi = await API.get('/api/avvisi') || [];
-      if (newAvvisi.length > 0) {
-        renderAvvisi(newAvvisi);
-      } else {
-        $('#avvisi-section').classList.add('hidden');
-      }
-      renderNav('dashboard', newAvvisi.length > 0);
-    } 
-  };
-  
-  // Form pubblica avviso (solo manager/admin)
-  if (isM) {
-    $('#avviso-form-section').classList.remove('hidden');
-    const af = $('#avviso-form'), aalert = $('#avviso-alert');
-    af.addEventListener('submit', async e => {
-      e.preventDefault(); aalert.classList.add('hidden');
-      try { 
-        await API.post('/api/avvisi', { titolo: af.titolo.value, messaggio: af.messaggio.value, priorita: af.priorita.value }); 
-        aalert.textContent = 'Pubblicato!'; aalert.className = 'alert alert-success'; aalert.classList.remove('hidden'); 
-        af.reset();
-        const newAvvisi = await API.get('/api/avvisi') || [];
-        $('#avvisi-section').classList.remove('hidden');
-        renderAvvisi(newAvvisi);
-        renderNav('dashboard', true);
-      } catch { aalert.textContent = 'Errore'; aalert.className = 'alert alert-error'; aalert.classList.remove('hidden'); }
-    });
-  }
-  
-  // Carica profilo e giorni ferie
-  const profile = await API.get('/api/profile');
-  const totalDays = profile.total_days || 26;
-  const usedDays = profile.used_days || 0;
-  const remainingDays = Math.max(0, totalDays - usedDays);
-  
-  const daysInfo = $('#days-info');
-  if (daysInfo) daysInfo.innerHTML = `<b>${remainingDays}</b> giorni rimanenti su ${totalDays}`;
-  
-  // Aggiorna statistiche dashboard se necessario
-  if (window.loadDashboardData) {
-    window.loadDashboardData();
-  }
-  const sb = $('#sede-badge');
-  if (sb) sb.textContent = profile.sede_nome ? `📍 ${profile.sede_nome}` : 'Sede non assegnata';
-  const pn = $('#profile-name');
-  if (pn) pn.textContent = profile.name;
-  
-  createFeriePieChart(profile.total_days || 0, profile.used_days || 0);
-
-  // Timeline richieste per dashboard
-  if (window.renderRequestsTimeline) {
-    const requests = await API.get('/api/requests') || [];
-    window.renderRequestsTimeline(requests.slice(0, 5));
-  }
-  
-  // Avatar icona (tema elettricista)
-  const avatarKey = (profile.avatar && avatarIcons[profile.avatar]) ? profile.avatar : avatarIconKeys[0];
-  const wrap = $('#avatar-icon-wrap');
-  if (wrap) wrap.innerHTML = avatarIconHtml(avatarKey, 44);
-  
-  window.changeAvatar = () => window.location.href = '/settings.html';
-  
-  // Meteo basato sulla sede
-  loadWeather(profile.sede_nome || 'Ferrara');
-  
-  // Form profilo
-  const pf = $('#profile-form'), palert = $('#profile-alert');
-  pf.name.value = profile.name; pf.email.value = profile.email; pf.phone.value = profile.phone || ''; pf.department.value = profile.department || '';
-  pf.addEventListener('submit', async e => {
-    e.preventDefault(); palert.classList.add('hidden');
-    try { 
-      await API.patch('/api/profile', { name: pf.name.value, phone: pf.phone.value, department: pf.department.value }); 
-      palert.textContent = 'Salvato!'; palert.className = 'alert alert-success'; palert.classList.remove('hidden'); 
-      user.name = pf.name.value; Auth.setAuth(Auth.getToken(), user);
-      $('#user-name').textContent = user.name;
-    } catch { palert.textContent = 'Errore'; palert.className = 'alert alert-error'; palert.classList.remove('hidden'); }
-  });
-  
-  // Sezione Manager/Admin
-  if (isM) {
-    $('#manager-section').classList.remove('hidden');
-    const list = $('#requests-list'), ft = $('#filter-text'), fs = $('#filter-status'), ff = $('#filter-from'), fto = $('#filter-to');
-    let all = [];
-    async function load() {
-      const [stats, data] = await Promise.all([API.get('/api/stats'), API.get('/api/requests')]);
-      createRequestsPieChart(stats || {});
-      all = data || []; render();
-    }
-    function render() {
-      const q = (ft.value || '').toLowerCase(), st = fs.value, from = ff.value, to = fto.value;
-      const f = all.filter(r => (!q || [r.nome, r.email, r.reparto].join(' ').toLowerCase().includes(q)) && (!st || r.stato === st) && (!from || r.inizio >= from) && (!to || r.fine <= to));
-      list.innerHTML = f.length ? f.map(r => `<tr>
-        <td><b>${esc(r.nome)}</b><br><small>${esc(r.tipo || 'Ferie')}</small></td>
-        <td class="hide-mobile">${r.codice_malattia ? `<span class="badge badge-info" style="font-size:10px">Prot: ${esc(r.codice_malattia)}</span>` : '-'}</td>
-        <td>${esc(r.inizio)} → ${esc(r.fine)}</td>
-        <td>${r.giorni}g</td>
-        <td><span class="badge ${badge(r.stato)}">${esc(r.stato)}</span></td>
-        <td><button class="btn-sm btn-secondary" onclick="action(${r.id},'Approvata')">✓</button> <button class="btn-sm btn-ghost" onclick="action(${r.id},'Rifiutata')">✗</button></td>
-      </tr>`).join('') : '<tr><td colspan="6">Nessuna.</td></tr>';
-    }
-    window.action = async (id, stato) => { await API.patch(`/api/requests/${id}/status`, { stato }); load(); };
-    window.exportData = f => window.open(`/api/export?format=${f}&from=${ff.value}&to=${fto.value}&stato=${fs.value}`);
-    const renderDeb = debounce(render, 120);
-    [ft, fs, ff, fto].forEach(el => el?.addEventListener('input', renderDeb));
-    $('#btn-refresh').addEventListener('click', load);
-    load();
-  }
+// ============================================
+// Auth Functions
+// ============================================
+function logout() {
+  token = null;
+  user = null;
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  showLogin();
 }
 
-// ADMIN
-async function initAdmin() {
-  if (!Auth.requireAuth() || !Auth.requireRole(['admin'])) return;
-  renderNav('admin');
-  const list = $('#requests-list'), users = $('#users-list'), ft = $('#filter-text'), fs = $('#filter-status');
-  let all = [], allUsers = [], sedi = [];
+function showLogin() {
+  loginPage.classList.remove('hidden');
+  dashboardPage.classList.add('hidden');
+}
+
+function showDashboard() {
+  loginPage.classList.add('hidden');
+  dashboardPage.classList.remove('hidden');
+  userName.textContent = user.name;
   
-  // Load sedi e utenti per visualizzare dipendenti per sede
-  sedi = await API.get('/api/sedi') || [];
-  allUsers = await API.get('/api/users') || [];
-  
-  const sedeOptions = '<option value="">Nessuna</option>' + sedi.map(s => `<option value="${s.id}">${esc(s.nome)}</option>`).join('');
-  $('#user-sede').innerHTML = sedeOptions;
-  
-  // Render sedi con lista dipendenti
-  function renderSedi() {
-    $('#sedi-list').innerHTML = sedi.map(s => {
-      const dipendenti = allUsers.filter(u => u.sede_id === s.id);
-      return `
-        <div style="background:var(--bg-glass);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px;border:1px solid var(--border)">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-            <div>
-              <h4 style="margin:0;font-size:15px">📍 ${esc(s.nome)}</h4>
-              <small style="color:var(--text-muted)">${dipendenti.length} dipendent${dipendenti.length === 1 ? 'e' : 'i'}</small>
-            </div>
-            <button class="btn-sm btn-ghost" onclick="delSede(${s.id})" title="Elimina sede">×</button>
-          </div>
-          ${dipendenti.length > 0 ? `
-            <div style="display:flex;flex-wrap:wrap;gap:6px">
-              ${dipendenti.map(d => `
-                <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:var(--bg-surface);border-radius:20px;font-size:12px">
-                  <span style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;font-size:10px;color:white;font-weight:600">${d.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</span>
-                  ${esc(d.name)}
-                  <span class="badge badge-pending" style="font-size:10px;padding:2px 6px">${d.role}</span>
-                </span>
-              `).join('')}
-            </div>
-          ` : '<p style="margin:0;color:var(--text-muted);font-size:12px;font-style:italic">Nessun dipendente assegnato</p>'}
-        </div>
-      `;
-    }).join('') || '<p style="color:var(--text-muted);font-size:13px">Nessuna sede configurata</p>';
-  }
-  renderSedi();
-  
-  async function loadReq() { all = await API.get('/api/requests') || []; renderReq(); }
-  function renderReq() {
-    const q = (ft.value || '').toLowerCase(), st = fs.value;
-    const f = all.filter(r => (!q || r.nome.toLowerCase().includes(q)) && (!st || r.stato === st));
-    list.innerHTML = f.length ? f.map(r => `<tr>
-      <td><b>${esc(r.nome)}</b><br><small style="color:var(--text-muted)">${esc(r.tipo || 'Ferie')}</small></td>
-      <td>${esc(r.inizio)} → ${esc(r.fine)}<br><small>${r.giorni} giorn${r.giorni === 1 ? 'o' : 'i'}</small></td>
-      <td>${r.codice_malattia ? `<span class="badge badge-info" style="font-size:10px">Prot: ${esc(r.codice_malattia)}</span><br>` : ''}<span class="badge ${badge(r.stato)}">${esc(r.stato)}</span></td>
-      <td><button class="btn-sm btn-secondary" onclick="action(${r.id},'Approvata')">✓</button> <button class="btn-sm btn-ghost" onclick="action(${r.id},'Rifiutata')">✗</button> <button class="btn-sm btn-danger" onclick="delReq(${r.id})">🗑</button></td>
-    </tr>`).join('') : '<tr><td colspan="4">Nessuna.</td></tr>';
-  }
-  async function loadUsers() {
-    allUsers = await API.get('/api/users') || [];
-    users.innerHTML = allUsers.map(u => `<tr>
-      <td><b>${esc(u.username)}</b></td>
-      <td>${esc(u.name)}<br><small>${esc(u.email)}</small></td>
-      <td><span class="badge badge-pending" style="font-size:11px">${esc(u.sede_nome || 'N/A')}</span></td>
-      <td>${u.total_days - u.used_days}/${u.total_days}</td>
-      <td><span class="badge badge-pending">${esc(u.role)}</span></td>
-      <td>
-        <select onchange="changeSede(${u.id}, this.value)" style="padding:4px;font-size:11px;border-radius:4px;background:var(--bg-glass);color:var(--text);border:1px solid var(--border)">
-          <option value="">Sposta...</option>
-          ${sedi.filter(s => s.id !== u.sede_id).map(s => `<option value="${s.id}">${esc(s.nome)}</option>`).join('')}
-        </select>
-        <button class="btn-sm btn-danger" onclick="delUser(${u.id})" style="margin-left:4px">🗑</button>
-      </td>
-    </tr>`).join('');
-    // Aggiorna anche la lista sedi con i nuovi dipendenti
-    renderSedi();
-  }
-  
-  window.action = async (id, stato) => { await API.patch(`/api/requests/${id}/status`, { stato }); loadReq(); };
-  window.delReq = async id => { if (confirm('Eliminare?')) { await API.delete(`/api/requests/${id}`); loadReq(); } };
-  window.delUser = async id => { if (confirm('Eliminare utente?')) { await API.delete(`/api/users/${id}`); loadUsers(); } };
-  window.changeSede = async (userId, sedeId) => { 
-    if (!sedeId) return;
-    await API.patch(`/api/users/${userId}`, { sede_id: parseInt(sedeId) }); 
-    loadUsers(); 
-  };
-  window.delSede = async id => { 
-    if (confirm('Eliminare sede? (Solo se vuota)')) { 
-      try { await API.delete(`/api/sedi/${id}`); location.reload(); }
-      catch { alert('Impossibile eliminare: ci sono dipendenti assegnati'); }
-    } 
-  };
-  
-  // Form nuovo utente
-  $('#user-form').addEventListener('submit', async e => {
-    e.preventDefault();
-    const f = e.target, alert = $('#user-alert');
-    alert.classList.add('hidden');
-    try { 
-      await API.post('/api/users', { 
-        username: f.username.value, 
-        password: f.password.value, 
-        name: f.name.value, 
-        email: f.email.value, 
-        role: f.role.value, 
-        total_days: parseInt(f.total_days?.value) || 26,
-        sede_id: f.sede?.value ? parseInt(f.sede.value) : null
-      }); 
-      alert.textContent = 'Utente creato!'; alert.className = 'alert alert-success'; alert.classList.remove('hidden'); 
-      f.reset(); loadUsers(); 
-    } catch { alert.textContent = 'Errore'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
+  // Show/hide admin elements
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.classList.toggle('hidden', user.role !== 'admin');
   });
   
-  // Form nuova sede
-  $('#sede-form')?.addEventListener('submit', async e => {
-    e.preventDefault();
-    const f = e.target, alert = $('#sede-alert');
-    alert.classList.add('hidden');
-    try { 
-      await API.post('/api/sedi', { nome: f.nome_sede.value }); 
-      alert.textContent = 'Sede creata!'; alert.className = 'alert alert-success'; alert.classList.remove('hidden'); 
-      f.reset(); location.reload();
-    } catch { alert.textContent = 'Errore o sede già esistente'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
-  });
-  
-  const renderDeb = debounce(renderReq, 120);
-  [ft, fs].forEach(el => el?.addEventListener('input', renderDeb));
-  $('#btn-refresh').addEventListener('click', loadReq);
-  loadReq(); loadUsers();
-  
-  // Logo functions
-  const logoSettings = await API.get('/api/settings/logo');
-  if (logoSettings?.hasLogo) {
-    $('#preview-logo').src = logoSettings.logoUrl;
-    $('#preview-logo').style.display = 'block';
-    $('#no-logo-text').style.display = 'none';
-    $('#btn-remove-logo').style.display = 'inline-flex';
-  }
-  
-  window.previewLogo = (input) => {
-    if (input.files && input.files[0]) {
-      const file = input.files[0];
-      if (file.size > 2 * 1024 * 1024) {
-        showLogoAlert('Immagine troppo grande (max 2MB)', 'error');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const imageData = e.target.result;
-        try {
-          const res = await API.post('/api/settings/logo', { imageData });
-          $('#preview-logo').src = res.logoUrl;
-          $('#preview-logo').style.display = 'block';
-          $('#no-logo-text').style.display = 'none';
-          $('#btn-remove-logo').style.display = 'inline-flex';
-          showLogoAlert('Logo caricato con successo!', 'success');
-          // Update sidebar logo
-          document.querySelectorAll('.company-logo').forEach(img => img.src = res.logoUrl);
-          document.querySelectorAll('.logo-frame').forEach(f => f.style.display = 'flex');
-        } catch {
-          showLogoAlert('Errore nel caricamento', 'error');
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-  
-  window.removeLogo = async () => {
-    if (!confirm('Rimuovere il logo?')) return;
-    try {
-      await fetch('/api/settings/logo', { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + Auth.getToken() }});
-      $('#preview-logo').style.display = 'none';
-      $('#no-logo-text').style.display = 'block';
-      $('#btn-remove-logo').style.display = 'none';
-      showLogoAlert('Logo rimosso', 'success');
-      document.querySelectorAll('.logo-frame').forEach(f => f.style.display = 'none');
-    } catch {
-      showLogoAlert('Errore', 'error');
-    }
-  };
-  
-  function showLogoAlert(msg, type) {
-    const alert = $('#logo-alert');
-    alert.textContent = msg;
-    alert.className = 'alert alert-' + (type === 'error' ? 'error' : 'success');
-    alert.classList.remove('hidden');
-    setTimeout(() => alert.classList.add('hidden'), 3000);
-  }
-  
-  // Backup functions
-  const lastBackup = localStorage.getItem('lastBackup');
-  if (lastBackup) $('#last-backup').textContent = new Date(lastBackup).toLocaleString('it-IT');
-  
-  window.downloadBackup = async () => {
-    const alert = $('#backup-alert');
-    alert.classList.add('hidden');
-    try {
-      const res = await fetch('/api/backup', { headers: Auth.authHeaders() });
-      if (!res.ok) throw new Error('Errore download');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `portal-backup-${new Date().toISOString().slice(0,10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      localStorage.setItem('lastBackup', new Date().toISOString());
-      $('#last-backup').textContent = new Date().toLocaleString('it-IT');
-      alert.textContent = 'Backup scaricato con successo!';
-      alert.className = 'alert alert-success';
-      alert.classList.remove('hidden');
-    } catch (err) {
-      alert.textContent = 'Errore durante il backup';
-      alert.className = 'alert alert-error';
-      alert.classList.remove('hidden');
-    }
-  };
-  
-  window.uploadBackup = async (input) => {
-    const file = input.files[0];
-    if (!file) return;
+  loadDashboard();
+}
+
+// ============================================
+// Navigation
+// ============================================
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const page = btn.dataset.page;
     
-    const alert = $('#backup-alert');
-    alert.classList.add('hidden');
+    // Update active nav
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
     
-    if (!confirm('⚠️ ATTENZIONE!\n\nIl ripristino sovrascriverà TUTTI i dati esistenti (eccetto il tuo account admin).\n\nSei sicuro di voler procedere?')) {
-      input.value = '';
+    // Show section
+    document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+    document.getElementById(`${page}-section`).classList.remove('hidden');
+    
+    // Load data
+    if (page === 'home') loadStats();
+    if (page === 'requests') loadRequests();
+    if (page === 'admin') loadAdminData();
+  });
+});
+
+// ============================================
+// Tabs (Admin)
+// ============================================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+    document.getElementById(`${tab}-tab`).classList.remove('hidden');
+  });
+});
+
+// ============================================
+// Load Functions
+// ============================================
+async function loadDashboard() {
+  await Promise.all([loadStats(), loadProfile()]);
+}
+
+async function loadStats() {
+  try {
+    const stats = await api('/stats');
+    document.getElementById('stat-total').textContent = stats.total;
+    document.getElementById('stat-pending').textContent = stats.pending;
+    document.getElementById('stat-approved').textContent = stats.approved;
+  } catch (e) {
+    console.error('Error loading stats:', e);
+  }
+}
+
+async function loadProfile() {
+  try {
+    const profile = await api('/profile');
+    const available = profile.total_days - profile.used_days;
+    const percent = (profile.used_days / profile.total_days) * 100;
+    
+    document.getElementById('days-available').textContent = available;
+    document.getElementById('days-progress').style.width = `${percent}%`;
+  } catch (e) {
+    console.error('Error loading profile:', e);
+  }
+}
+
+async function loadRequests() {
+  try {
+    const requests = await api('/requests');
+    const container = document.getElementById('requests-list');
+    
+    if (requests.length === 0) {
+      container.innerHTML = '<p class="card">Nessuna richiesta trovata</p>';
       return;
     }
     
-    try {
-      const text = await file.text();
-      const backup = JSON.parse(text);
-      
-      if (!backup.version || !backup.data) {
-        throw new Error('File di backup non valido');
-      }
-      
-      const res = await fetch('/api/restore', {
-        method: 'POST',
-        headers: { ...Auth.authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify(backup)
-      });
-      
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error);
-      
-      alert.textContent = 'Ripristino completato! La pagina si ricaricherà...';
-      alert.className = 'alert alert-success';
-      alert.classList.remove('hidden');
-      
-      setTimeout(() => location.reload(), 2000);
-    } catch (err) {
-      alert.textContent = 'Errore: ' + err.message;
-      alert.className = 'alert alert-error';
-      alert.classList.remove('hidden');
-    }
-    
-    input.value = '';
-  };
-}
-
-// CALENDAR
-async function initCalendar() {
-  if (!Auth.requireAuth()) return;
-  renderNav('calendar');
-  let currentDate = new Date();
-  const calendar = $('#calendar-grid'), monthLabel = $('#month-label');
-  const months = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
-  
-  // Icone per tipo richiesta
-  const tipoIcon = {
-    'Ferie': '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>',
-    'Malattia': '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4m8-4v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M12 10v4m-2-2h4"/></svg>',
-    'Permesso': '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
-    'ROL': '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>'
-  };
-  const tipoColor = {
-    'Ferie': 'cal-ferie',
-    'Malattia': 'cal-malattia',
-    'Permesso': 'cal-permesso',
-    'ROL': 'cal-rol'
-  };
-  
-  async function render() {
-    const year = currentDate.getFullYear(), month = currentDate.getMonth() + 1;
-    monthLabel.textContent = `${months[month - 1]} ${year}`;
-    const events = await API.get(`/api/calendar?year=${year}&month=${month}`) || [];
-    const firstDay = new Date(year, month - 1, 1).getDay(), daysInMonth = new Date(year, month, 0).getDate();
-    let html = '<div class="cal-header">Lun</div><div class="cal-header">Mar</div><div class="cal-header">Mer</div><div class="cal-header">Gio</div><div class="cal-header">Ven</div><div class="cal-header">Sab</div><div class="cal-header">Dom</div>';
-    const startDay = firstDay === 0 ? 6 : firstDay - 1;
-    for (let i = 0; i < startDay; i++) html += '<div class="cal-day empty"></div>';
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      const dayEvents = events.filter(e => dateStr >= e.inizio && dateStr <= e.fine);
-      const isWeekend = new Date(year, month - 1, d).getDay() % 6 === 0, isToday = new Date().toISOString().slice(0, 10) === dateStr;
-      const eventsHtml = dayEvents.map(e => {
-        const tipo = e.tipo || 'Ferie';
-        const colorClass = tipoColor[tipo] || 'cal-ferie';
-        const iconSvg = tipoIcon[tipo] || tipoIcon['Ferie'];
-        const nome = e.nome.split(' ')[0]; // Solo il primo nome
-        return `<div class="cal-event ${colorClass}" title="${esc(e.nome)} - ${tipo}">
-          <span class="cal-icon">${iconSvg}</span>
-          <span class="cal-nome">${esc(nome)}</span>
-        </div>`;
-      }).join('');
-      html += `<div class="cal-day${isWeekend ? ' weekend' : ''}${isToday ? ' today' : ''}" data-date="${dateStr}" onclick="showDayDetails('${dateStr}')"><span class="day-num">${d}</span><div class="cal-events">${eventsHtml}</div></div>`;
-    }
-    calendar.innerHTML = html;
+    container.innerHTML = requests.map(r => `
+      <div class="request-card">
+        <div class="request-info">
+          <h3>${r.type} - ${r.days} giorn${r.days === 1 ? 'o' : 'i'}</h3>
+          <p>${formatDate(r.start_date)} - ${formatDate(r.end_date)}</p>
+        </div>
+        <span class="status status-${r.status}">${statusLabel(r.status)}</span>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error('Error loading requests:', e);
   }
-  window.prevMonth = () => { currentDate.setMonth(currentDate.getMonth() - 1); render(); };
-  window.nextMonth = () => { currentDate.setMonth(currentDate.getMonth() + 1); render(); };
-  render();
 }
 
-// Mostra i dettagli delle ferie per un giorno specifico
-async function showDayDetails(dateStr) {
+async function loadAdminData() {
+  await Promise.all([loadAdminRequests(), loadUsers()]);
+}
+
+async function loadAdminRequests() {
   try {
-    const data = await API.get(`/api/calendar/day?date=${encodeURIComponent(dateStr)}`);
+    const requests = await api('/requests');
+    const pending = requests.filter(r => r.status === 'pending');
+    const container = document.getElementById('admin-requests-list');
     
-    // Crea il contenuto del modal
-    let content = `<div class="modal-header">
-      <h3>Ferie per il ${formatDate(dateStr)}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <div class="modal-body">`;
-    
-    if (data.length === 0) {
-      content += `<p class="text-muted">Nessuna ferie o permesso per questo giorno.</p>`;
-    } else {
-      content += `<div class="day-details-list">`;
-      data.forEach(item => {
-        const tipo = item.tipo || 'Ferie';
-        const colorClass = {
-          'Ferie': 'cal-ferie',
-          'Malattia': 'cal-malattia',
-          'Permesso': 'cal-permesso',
-          'ROL': 'cal-rol'
-        }[tipo] || 'cal-ferie';
-        
-        content += `<div class="day-detail-item ${colorClass}">
-          <div class="day-detail-header">
-            <span class="day-detail-icon">${getTipoIcon(tipo)}</span>
-            <strong>${esc(item.nome)}</strong>
-            <span class="day-detail-badge">${tipo}</span>
-          </div>
-          <div class="day-detail-info">
-            <span>Periodo: ${formatDate(item.inizio)} - ${formatDate(item.fine)}</span>
-            ${item.note ? `<br><small>Note: ${esc(item.note)}</small>` : ''}
-          </div>
-        </div>`;
-      });
-      content += `</div>`;
+    if (pending.length === 0) {
+      container.innerHTML = '<p class="card">Nessuna richiesta in attesa</p>';
+      return;
     }
     
-    content += `</div>`;
+    container.innerHTML = pending.map(r => `
+      <div class="request-card">
+        <div class="request-info">
+          <h3>${r.user_name || 'Utente'} - ${r.type}</h3>
+          <p>${formatDate(r.start_date)} - ${formatDate(r.end_date)} (${r.days} giorni)</p>
+        </div>
+        <div class="request-actions">
+          <button class="btn btn-success btn-sm" onclick="updateRequest(${r.id}, 'approved')">Approva</button>
+          <button class="btn btn-danger btn-sm" onclick="updateRequest(${r.id}, 'rejected')">Rifiuta</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error('Error loading admin requests:', e);
+  }
+}
+
+async function loadUsers() {
+  try {
+    const users = await api('/users');
+    const container = document.getElementById('users-list');
     
-    // Mostra il modal
-    showModal(content);
-  } catch (error) {
-    console.error('Errore nel caricamento dei dettagli:', error);
-    showModal(`<div class="modal-header"><h3>Errore</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
-      <div class="modal-body"><p class="text-error">Impossibile caricare i dettagli delle ferie.</p></div>`);
+    container.innerHTML = users.map(u => `
+      <div class="user-card">
+        <div class="user-info">
+          <h3>${u.name}</h3>
+          <p>${u.email} - Giorni: ${u.total_days - u.used_days}/${u.total_days}</p>
+        </div>
+        <span class="role-badge ${u.role}">${u.role}</span>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error('Error loading users:', e);
   }
 }
 
-// Funzioni di supporto per il modal
-function showModal(content) {
-  let modal = document.getElementById('day-details-modal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'day-details-modal';
-    modal.className = 'modal';
-    modal.innerHTML = `<div class="modal-overlay" onclick="closeModal()"></div>
-      <div class="modal-content">${content}</div>`;
-    document.body.appendChild(modal);
-  } else {
-    modal.querySelector('.modal-content').innerHTML = content;
+// ============================================
+// Actions
+// ============================================
+async function updateRequest(id, status) {
+  try {
+    await api(`/requests/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    });
+    loadAdminRequests();
+    loadStats();
+  } catch (e) {
+    alert(e.message);
   }
-  modal.classList.add('active');
 }
 
-function closeModal() {
-  const modal = document.getElementById('day-details-modal');
-  if (modal) modal.classList.remove('active');
-}
-
+// ============================================
+// Helpers
+// ============================================
 function formatDate(dateStr) {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-function getTipoIcon(tipo) {
-  const tipoIcon = {
-    'Ferie': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>',
-    'Malattia': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4m8-4v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M12 10v4m-2-2h4"/></svg>',
-    'Permesso': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
-    'ROL': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>'
+function statusLabel(status) {
+  const labels = {
+    pending: 'In Attesa',
+    approved: 'Approvata',
+    rejected: 'Rifiutata'
   };
-  return tipoIcon[tipo] || tipoIcon['Ferie'];
+  return labels[status] || status;
 }
 
-// CANTIERI
-async function initCantieri() {
-  if (!Auth.requireAuth()) return;
-  renderNav('cantieri');
-  const list = $('#list'), filter = $('#filter'), form = $('#form'), alert = $('#alert');
-  let all = [], editId = null, users = [];
-  async function load() {
-    [all, users] = await Promise.all([API.get('/api/cantieri'), API.get('/api/users')]);
-    users = users || [];
-    $('#add-tecnico').innerHTML = '<option value="">Seleziona...</option>' + users.map(u => `<option value="${u.id}">${esc(u.name)}</option>`).join('');
-    render();
-  }
-  function render() {
-    const q = (filter.value || '').toLowerCase();
-    const f = (all || []).filter(c => !q || [c.nome, c.cliente, c.indirizzo].join(' ').toLowerCase().includes(q));
-    list.innerHTML = f.length ? f.map(c => `<tr><td><b>${esc(c.nome)}</b><br><small>${esc(c.indirizzo || '')}</small></td><td>${esc(c.cliente)}</td><td><span class="badge ${c.stato === 'Attivo' ? 'badge-approved' : 'badge-pending'}">${esc(c.stato)}</span></td><td><button class="btn-sm btn-secondary" onclick="edit(${c.id})">✏️</button></td></tr>`).join('') : '<tr><td colspan="4">Nessun cantiere.</td></tr>';
-  }
-  window.edit = id => {
-    const c = all.find(x => x.id === id);
-    if (!c) return;
-    editId = id;
-    form.id.value = id; form.nome.value = c.nome; form.cliente.value = c.cliente; form.indirizzo.value = c.indirizzo || ''; form.data_inizio.value = c.data_inizio || ''; form.data_fine.value = c.data_fine || ''; form.note.value = c.note || '';
-    $('#form-title').textContent = 'Modifica Cantiere';
-    $('#tecnici-section').classList.remove('hidden');
-    renderTecnici(c.tecnici || []);
-  };
-  window.resetForm = () => { editId = null; form.reset(); $('#form-title').textContent = 'Nuovo Cantiere'; $('#tecnici-section').classList.add('hidden'); };
-  function renderTecnici(tecnici) {
-    $('#tecnici-list').innerHTML = tecnici.length ? tecnici.map(t => `<span class="badge badge-pending" style="margin:2px">${esc(t.name)} <button type="button" onclick="removeTecnico(${t.id})" style="background:none;border:none;cursor:pointer">×</button></span>`).join('') : '<small>Nessun tecnico assegnato</small>';
-  }
-  window.addTecnico = async () => {
-    const uid = $('#add-tecnico').value;
-    if (!uid || !editId) return;
-    await API.post(`/api/cantieri/${editId}/assegna`, { user_id: uid });
-    load();
-  };
-  window.removeTecnico = async uid => { if (editId) { await API.delete(`/api/cantieri/${editId}/assegna/${uid}`); load(); } };
-  form.addEventListener('submit', async e => {
-    e.preventDefault(); alert.classList.add('hidden');
-    const data = { nome: form.nome.value, cliente: form.cliente.value, indirizzo: form.indirizzo.value, data_inizio: form.data_inizio.value, data_fine: form.data_fine.value, note: form.note.value };
-    try {
-      if (editId) await API.patch(`/api/cantieri/${editId}`, data);
-      else await API.post('/api/cantieri', data);
-      alert.textContent = 'Salvato!'; alert.className = 'alert alert-success'; alert.classList.remove('hidden');
-      resetForm(); load();
-    } catch { alert.textContent = 'Errore'; alert.className = 'alert alert-error'; alert.classList.remove('hidden'); }
-  });
-  filter.addEventListener('input', debounce(render, 120));
-  load();
-}
+// ============================================
+// Event Listeners
+// ============================================
 
-// WEATHER
-async function loadWeather(city) {
-  const weatherIcons = {
-    'clear': '☀️', 'sunny': '☀️',
-    'partly': '⛅', 'cloudy': '☁️', 'overcast': '☁️',
-    'rain': '🌧️', 'drizzle': '🌧️', 'shower': '🌧️',
-    'thunder': '⛈️', 'storm': '⛈️',
-    'snow': '❄️', 'sleet': '🌨️',
-    'fog': '🌫️', 'mist': '🌫️',
-    'wind': '💨'
-  };
+// Login Form
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
   
   try {
-    // Usa Open-Meteo (gratuito, no API key)
-    const cityCoords = {
-      'Ferrara': { lat: 44.84, lon: 11.62 },
-      'Ravenna': { lat: 44.42, lon: 12.20 },
-      'Bologna': { lat: 44.49, lon: 11.34 },
-      'Milano': { lat: 45.46, lon: 9.19 },
-      'Roma': { lat: 41.89, lon: 12.48 }
-    };
+    const data = await api('/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password })
+    });
     
-    const coords = cityCoords[city] || cityCoords['Ferrara'];
-    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,weather_code&timezone=Europe/Rome`);
-    const data = await res.json();
+    token = data.token;
+    user = data.user;
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
     
-    const temp = Math.round(data.current.temperature_2m);
-    const code = data.current.weather_code;
-    
-    // Weather codes mapping
-    let desc = 'Sereno', icon = '☀️';
-    if (code === 0) { desc = 'Sereno'; icon = '☀️'; }
-    else if (code <= 3) { desc = 'Parzialmente nuvoloso'; icon = '⛅'; }
-    else if (code <= 49) { desc = 'Nebbia'; icon = '🌫️'; }
-    else if (code <= 59) { desc = 'Pioggia leggera'; icon = '🌧️'; }
-    else if (code <= 69) { desc = 'Pioggia'; icon = '🌧️'; }
-    else if (code <= 79) { desc = 'Neve'; icon = '❄️'; }
-    else if (code <= 84) { desc = 'Pioggia intensa'; icon = '🌧️'; }
-    else if (code <= 94) { desc = 'Neve intensa'; icon = '❄️'; }
-    else { desc = 'Temporale'; icon = '⛈️'; }
-    
-    $('#weather-icon').textContent = icon;
-    $('#weather-temp').textContent = `${temp}°C`;
-    $('#weather-desc').textContent = desc;
-    $('#weather-city').textContent = `📍 ${city}`;
-  } catch {
-    $('#weather-icon').textContent = '⛅';
-    $('#weather-temp').textContent = '--°C';
-    $('#weather-desc').textContent = 'Non disponibile';
-    $('#weather-city').textContent = city;
+    showDashboard();
+  } catch (e) {
+    alert(e.message);
   }
-}
+});
 
-// SETTINGS
-async function initSettings() {
-  if (!Auth.requireAuth()) return;
-  renderNav('settings');
-  
-  const profile = await API.get('/api/profile');
-  let selectedAvatarKey = (profile.avatar && avatarIcons[profile.avatar]) ? profile.avatar : avatarIconKeys[0];
-  
-  const preview = $('#settings-avatar-preview');
-  const grid = $('#avatar-icons-grid');
-  const alertEl = $('#avatar-alert');
-  
-  function renderPreview() {
-    if (preview) preview.innerHTML = avatarIconHtml(selectedAvatarKey, 56);
-  }
-  
-  function renderGrid() {
-    if (!grid) return;
-    grid.innerHTML = avatarIconKeys.map(key => {
-      const t = avatarIcons[key];
-      const sel = key === selectedAvatarKey ? ' selected' : '';
-      return `<button type="button" class="avatar-icon-btn${sel}" data-key="${key}" title="${esc(t.label)}"><span class="icon">${t.svg}</span></button>`;
-    }).join('');
-    grid.querySelectorAll('.avatar-icon-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        selectedAvatarKey = btn.dataset.key;
-        grid.querySelectorAll('.avatar-icon-btn').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        renderPreview();
-      });
-    });
-  }
-  
-  renderPreview();
-  renderGrid();
-  
-  window.saveAvatar = async () => {
-    alertEl.classList.add('hidden');
-    try {
-      await API.patch('/api/profile', { avatar: selectedAvatarKey });
-      alertEl.textContent = 'Avatar salvato!';
-      alertEl.className = 'alert alert-success';
-      alertEl.classList.remove('hidden');
-    } catch {
-      alertEl.textContent = 'Errore nel salvataggio';
-      alertEl.className = 'alert alert-error';
-      alertEl.classList.remove('hidden');
-    }
-  };
-  
-  // Password form
-  const cp = $('#password-form'), cpalert = $('#password-alert');
-  cp.addEventListener('submit', async e => {
-    e.preventDefault();
-    cpalert.classList.add('hidden');
-    if (cp.newPassword.value !== cp.confirmPassword.value) {
-      cpalert.textContent = 'Le password non coincidono';
-      cpalert.className = 'alert alert-error';
-      cpalert.classList.remove('hidden');
-      return;
-    }
-    try {
-      await API.post('/api/change-password', { oldPassword: cp.oldPassword.value, newPassword: cp.newPassword.value });
-      cpalert.textContent = 'Password aggiornata!';
-      cpalert.className = 'alert alert-success';
-      cpalert.classList.remove('hidden');
-      cp.reset();
-    } catch {
-      cpalert.textContent = 'Password attuale errata';
-      cpalert.className = 'alert alert-error';
-      cpalert.classList.remove('hidden');
-    }
-  });
-  
-  // Theme
-  const savedTheme = localStorage.getItem('theme') || 'dark';
-  $('#theme-select').value = savedTheme;
-  
-  window.saveTheme = () => {
-    const theme = $('#theme-select').value;
-    localStorage.setItem('theme', theme);
-    // Per ora solo salva, implementazione tema chiaro futura
-  };
-}
+// Logout
+logoutBtn.addEventListener('click', logout);
 
-// DPI (Dispositivi Protezione Individuale)
-async function initDPI() {
-  if (!Auth.requireAuth()) return;
-  renderNav('dpi');
+// New Request Form
+document.getElementById('request-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
   
-  const user = Auth.getUser();
-  const isManager = ['admin', 'manager'].includes(user.role);
+  const type = document.getElementById('req-type').value;
+  const start_date = document.getElementById('req-start').value;
+  const end_date = document.getElementById('req-end').value;
+  const reason = document.getElementById('req-reason').value;
   
-  if (!isManager) {
-    $('#form-card')?.remove();
-    $('#tab-catalogo')?.remove();
-    $('#tab-gestione')?.remove();
-    $('#dpi-filters')?.classList.add('hidden');
-    $('#dpi-mio-riepilogo')?.classList.remove('hidden');
-  }
-  
-  let catalogo = [];
-  let users = [];
-  let assegnazioni = [];
-  
-  async function loadData() {
-    catalogo = await API.get('/api/dpi/catalogo');
-    assegnazioni = await API.get('/api/dpi/assegnazioni');
-    if (isManager) users = await API.get('/api/users');
-  }
-  
-  await loadData();
-  
-  function refreshDpiSelect() {
-    const selectDpi = $('#select-dpi');
-    if (!selectDpi) return;
-    selectDpi.innerHTML = '<option value="">Seleziona DPI...</option>';
-    const byCategoria = {};
-    catalogo.forEach(d => {
-      if (!byCategoria[d.categoria]) byCategoria[d.categoria] = [];
-      byCategoria[d.categoria].push(d);
-    });
-    Object.entries(byCategoria).forEach(([cat, items]) => {
-      const optgroup = document.createElement('optgroup');
-      optgroup.label = cat;
-      items.forEach(d => {
-        const opt = document.createElement('option');
-        opt.value = d.id;
-        opt.textContent = d.nome;
-        opt.dataset.taglie = d.taglia_disponibili || 'Unica';
-        optgroup.appendChild(opt);
-      });
-      selectDpi.appendChild(optgroup);
-    });
-  }
-  
-  function populateSelects() {
-    const filterUser = $('#filter-user');
-    const selectUser = $('#select-user');
-    if (isManager && users.length) {
-      users.forEach(u => {
-        if (filterUser) filterUser.innerHTML += `<option value="${u.id}">${esc(u.name)}</option>`;
-        if (selectUser) selectUser.innerHTML += `<option value="${u.id}">${esc(u.name)}</option>`;
-      });
-    }
-    refreshDpiSelect();
-  }
-  populateSelects();
-  
-  window.updateTaglie = () => {
-    const select = $('#select-dpi');
-    const taglieSelect = $('#select-taglia');
-    const opt = select?.options[select.selectedIndex];
-    const taglie = opt?.dataset?.taglie?.split(',')?.map(s => s.trim()) || ['Unica'];
-    if (taglieSelect) taglieSelect.innerHTML = taglie.map(t => `<option value="${t}">${esc(t)}</option>`).join('');
-  };
-  
-  function isScaduto(a) {
-    return a.data_scadenza && new Date(a.data_scadenza) < new Date();
-  }
-  function isInScadenza(a) {
-    if (!a.data_scadenza) return false;
-    const d = new Date(a.data_scadenza);
-    const now = new Date();
-    return d >= now && d < new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-  }
-  
-  function renderRiepilogoMio() {
-    if (isManager) return;
-    const tot = assegnazioni.filter(a => a.stato === 'attivo').length;
-    const scad = assegnazioni.filter(a => a.stato === 'attivo' && isInScadenza(a)).length;
-    const exp = assegnazioni.filter(a => a.stato === 'attivo' && isScaduto(a)).length;
-    const v = (id, n) => { const el = $(id); if (el) el.textContent = n; };
-    v('#dpi-kpi-tot', tot);
-    v('#dpi-kpi-scad', scad);
-    v('#dpi-kpi-exp', exp);
-  }
-  
-  function renderAssegnazioni() {
-    const container = $('#assegnazioni-list');
-    const filterUserVal = $('#filter-user')?.value;
-    const filterStatoVal = $('#filter-stato')?.value;
-    
-    let filtered = assegnazioni;
-    if (filterUserVal) filtered = filtered.filter(a => a.user_id == filterUserVal);
-    if (filterStatoVal) {
-      if (filterStatoVal === 'attivo') filtered = filtered.filter(a => a.stato === 'attivo' && !isScaduto(a) && !isInScadenza(a));
-      else if (filterStatoVal === 'inscadenza') filtered = filtered.filter(a => a.stato === 'attivo' && isInScadenza(a));
-      else if (filterStatoVal === 'scaduto') filtered = filtered.filter(a => isScaduto(a));
-    }
-    
-    renderRiepilogoMio();
-    
-    if (filtered.length === 0) {
-      container.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">Nessun DPI assegnato</p>';
-      return;
-    }
-    
-    const byUser = {};
-    filtered.forEach(a => {
-      const key = a.dipendente_nome;
-      if (!byUser[key]) byUser[key] = [];
-      byUser[key].push(a);
+  try {
+    await api('/requests', {
+      method: 'POST',
+      body: JSON.stringify({ type, start_date, end_date, reason })
     });
     
-    container.innerHTML = Object.entries(byUser).map(([name, items]) => `
-      <div class="dpi-user-card" style="background:var(--bg-glass);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-          <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:13px">
-            ${esc(name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2))}
-          </div>
-          <strong>${esc(name)}</strong>
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px">
-          ${items.map(a => {
-            const scaduto = isScaduto(a);
-            const scadeBrv = isInScadenza(a);
-            return `
-              <div class="dpi-item" style="background:var(--bg-card);border:1px solid ${scaduto ? 'var(--danger)' : scadeBrv ? 'var(--warning)' : 'var(--border)'};border-radius:8px;padding:10px 14px;font-size:13px;position:relative">
-                <div style="font-weight:500">${esc(a.dpi_nome)}</div>
-                <div style="color:var(--text-muted);font-size:11px;margin-top:2px">
-                  ${a.taglia ? `Tg. ${esc(a.taglia)}` : ''} ${a.quantita > 1 ? `x${a.quantita}` : ''}
-                </div>
-                <div style="color:var(--text-muted);font-size:10px;margin-top:4px">
-                  Consegna: ${new Date(a.data_consegna).toLocaleDateString('it-IT')}
-                  ${a.data_scadenza ? `<br>Scadenza: ${new Date(a.data_scadenza).toLocaleDateString('it-IT')}` : ''}
-                </div>
-                ${scaduto ? '<span style="position:absolute;top:6px;right:6px;width:8px;height:8px;background:var(--danger);border-radius:50%"></span>' : ''}
-                ${isManager ? `<button onclick="delAssegnazione(${a.id})" style="position:absolute;bottom:6px;right:6px;background:none;border:none;color:var(--danger);cursor:pointer;padding:2px" title="Rimuovi">${icon('x', 14)}</button>` : ''}
-              </div>
-            `;
-          }).join('')}
-        </div>
-      </div>
-    `).join('');
+    alert('Richiesta inviata con successo!');
+    e.target.reset();
+    
+    // Go to requests page
+    document.querySelector('[data-page="requests"]').click();
+  } catch (e) {
+    alert(e.message);
   }
-  renderAssegnazioni();
-  
-  $('#filter-user')?.addEventListener('change', renderAssegnazioni);
-  $('#filter-stato')?.addEventListener('change', renderAssegnazioni);
-  
-  // Render catalogo
-  function renderCatalogo() {
-    const container = $('#catalogo-list');
-    if (!container) return;
-    
-    const byCategoria = {};
-    catalogo.forEach(d => {
-      if (!byCategoria[d.categoria]) byCategoria[d.categoria] = [];
-      byCategoria[d.categoria].push(d);
-    });
-    
-    container.innerHTML = Object.entries(byCategoria).map(([cat, items]) => `
-      <div style="margin-bottom:20px">
-        <h4 style="color:var(--primary-light);font-size:13px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">${cat}</h4>
-        ${items.map(d => `
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg-glass);border:1px solid var(--border);border-radius:8px;margin-bottom:8px">
-            <div>
-              <div style="font-weight:500">${d.nome}</div>
-              <div style="font-size:11px;color:var(--text-muted)">
-                ${d.descrizione || ''} • Taglie: ${d.taglia_disponibili}
-                ${d.codice_barre ? ` • Codice: ${d.codice_barre}` : ''}
-              </div>
-            </div>
-            <div style="display:flex;gap:8px">
-              <button onclick="editDpi(${d.id})" class="btn-ghost btn-sm" style="color:var(--primary)" title="Modifica">${icon('edit', 14)}</button>
-              <button onclick="delDpi(${d.id})" class="btn-ghost btn-sm" style="color:var(--danger)" title="Elimina">${icon('trash', 14)}</button>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    `).join('');
-  }
-  if (isManager) renderCatalogo();
-  
-  // Tabs
-  window.showTab = (tab) => {
-    document.querySelectorAll('.dpi-tabs .tab').forEach(t => t.classList.toggle('active', t.dataset?.tab === tab));
-    $('#panel-assegnazioni').classList.toggle('hidden', tab !== 'assegnazioni');
-    $('#panel-catalogo')?.classList.toggle('hidden', tab !== 'catalogo');
-    $('#panel-gestione')?.classList.toggle('hidden', tab !== 'gestione');
-  };
-  
-  // Form submit - new assignment
-  const assignForm = $('#assign-form');
-  const alert = $('#alert');
-  if (assignForm) {
-    // Set default date to today
-    assignForm.data_consegna.value = new Date().toISOString().split('T')[0];
-    
-    assignForm.addEventListener('submit', async e => {
-      e.preventDefault();
-      alert.classList.add('hidden');
-      
-      const data = {
-        user_id: parseInt(assignForm.user_id.value),
-        dpi_id: parseInt(assignForm.dpi_id.value),
-        taglia: assignForm.taglia.value,
-        quantita: parseInt(assignForm.quantita.value) || 1,
-        data_consegna: assignForm.data_consegna.value,
-        data_scadenza: assignForm.data_scadenza.value || null,
-        note: assignForm.note.value
-      };
-      
-      try {
-        const res = await API.post('/api/dpi/assegnazioni', data);
-        if (res?.error) throw new Error(res.error);
-        alert.textContent = 'DPI assegnato con successo!';
-        alert.className = 'alert alert-success';
-        alert.classList.remove('hidden');
-        assignForm.reset();
-        assignForm.data_consegna.value = new Date().toISOString().split('T')[0];
-        await loadData();
-        renderAssegnazioni();
-      } catch (err) {
-        alert.textContent = err?.message || 'Errore';
-        alert.className = 'alert alert-error';
-        alert.classList.remove('hidden');
-      }
-    });
-  }
-  
-  // Delete assignment
-  window.delAssegnazione = async (id) => {
-    if (!confirm('Rimuovere questa assegnazione DPI?')) return;
-    try {
-      const res = await API.delete('/api/dpi/assegnazioni/' + id);
-      if (res?.error) throw new Error(res.error);
-      await loadData();
-      renderAssegnazioni();
-    } catch (err) {
-      const al = $('#alert');
-      if (al) { al.textContent = err?.message || 'Errore'; al.className = 'alert alert-error'; al.classList.remove('hidden'); }
-    }
-  };
-  
-  // Catalogo form
-  const catForm = $('#catalogo-form');
-  const alertCat = $('#alert-cat');
-  if (catForm) {
-    catForm.addEventListener('submit', async e => {
-      e.preventDefault();
-      alertCat.classList.add('hidden');
-      try {
-        const res = await API.post('/api/dpi/catalogo', {
-          nome: catForm.nome.value,
-          categoria: catForm.categoria.value,
-          descrizione: catForm.descrizione.value,
-          taglia_disponibili: catForm.taglia_disponibili.value || 'Unica',
-          codice_barre: catForm.codice_barre.value || null
-        });
-        if (res?.error) throw new Error(res.error);
-        alertCat.textContent = 'DPI aggiunto al catalogo!';
-        alertCat.className = 'alert alert-success';
-        alertCat.classList.remove('hidden');
-        catForm.reset();
-        catForm.taglia_disponibili.value = 'Unica';
-        catForm.codice_barre.value = '';
-        await loadData();
-        refreshDpiSelect();
-        renderCatalogo();
-      } catch (err) {
-        alertCat.textContent = err?.message || 'Errore';
-        alertCat.className = 'alert alert-error';
-        alertCat.classList.remove('hidden');
-      }
-    });
-  }
-  
-  window.delDpi = async (id) => {
-    if (!confirm('Eliminare questo DPI dal catalogo?')) return;
-    try {
-      const res = await API.delete('/api/dpi/catalogo/' + id);
-      if (res?.error) throw new Error(res.error);
-      await loadData();
-      refreshDpiSelect();
-      renderCatalogo();
-    } catch (err) {
-      const ac = $('#alert-cat');
-      if (ac) {
-        ac.textContent = err?.message || 'Impossibile eliminare: DPI assegnato a dipendenti';
-        ac.className = 'alert alert-error';
-        ac.classList.remove('hidden');
-      }
-      showTab('catalogo');
-    }
-  };
-  
-  // Edit DPI
-  window.editDpi = (id) => {
-    const dpi = catalogo.find(d => d.id === id);
-    if (!dpi) return;
-    
-    const form = $('#edit-form');
-    const instructions = $('#edit-instructions');
-    
-    form.edit_id.value = dpi.id;
-    form.edit_nome.value = dpi.nome;
-    form.edit_categoria.value = dpi.categoria;
-    form.edit_descrizione.value = dpi.descrizione || '';
-    form.edit_taglia_disponibili.value = dpi.taglia_disponibili || 'Unica';
-    form.edit_codice_barre.value = dpi.codice_barre || '';
-    
-    form.style.display = 'block';
-    instructions.style.display = 'none';
-    
-    // Switch to gestione tab
-    showTab('gestione');
-  };
-  
-  window.cancelEdit = () => {
-    const form = $('#edit-form');
-    const instructions = $('#edit-instructions');
-    const alert = $('#alert-edit');
-    
-    form.style.display = 'none';
-    instructions.style.display = 'block';
-    alert.classList.add('hidden');
-    form.reset();
-  };
-  
-  // Edit form submit
-  const editForm = $('#edit-form');
-  const alertEdit = $('#alert-edit');
-  if (editForm) {
-    editForm.addEventListener('submit', async e => {
-      e.preventDefault();
-      alertEdit.classList.add('hidden');
-      
-      try {
-        const res = await API.patch('/api/dpi/catalogo/' + editForm.edit_id.value, {
-          nome: editForm.edit_nome.value,
-          categoria: editForm.edit_categoria.value,
-          descrizione: editForm.edit_descrizione.value,
-          taglia_disponibili: editForm.edit_taglia_disponibili.value || 'Unica',
-          codice_barre: editForm.edit_codice_barre.value || null
-        });
-        if (res?.error) throw new Error(res.error);
-        alertEdit.textContent = 'DPI aggiornato con successo!';
-        alertEdit.className = 'alert alert-success';
-        alertEdit.classList.remove('hidden');
-        await loadData();
-        refreshDpiSelect();
-        renderCatalogo();
-        cancelEdit();
-      } catch (err) {
-        alertEdit.textContent = err?.message || 'Errore aggiornamento';
-        alertEdit.className = 'alert alert-error';
-        alertEdit.classList.remove('hidden');
-      }
-    });
-  }
-  
-  // Export DPI
-  window.exportDPI = async () => {
-    try {
-      const response = await fetch('/api/dpi/export', {
-        headers: { 'Authorization': 'Bearer ' + Auth.getToken() }
-      });
-      
-      if (!response.ok) throw new Error('Errore export');
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `dpi-export-${new Date().toISOString().slice(0,10)}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-      
-      const alertImport = $('#alert-import');
-      alertImport.textContent = 'Export completato con successo!';
-      alertImport.className = 'alert alert-success';
-      alertImport.classList.remove('hidden');
-      setTimeout(() => alertImport.classList.add('hidden'), 3000);
-    } catch (err) {
-      const alertImport = $('#alert-import');
-      alertImport.textContent = 'Errore durante l\'export: ' + err.message;
-      alertImport.className = 'alert alert-error';
-      alertImport.classList.remove('hidden');
-    }
-  };
-  
-  // Import DPI
-  window.importDPI = async () => {
-    const fileInput = $('#import-file');
-    const file = fileInput.files[0];
-    const alertImport = $('#alert-import');
-    
-    if (!file) {
-      alertImport.textContent = 'Seleziona un file JSON da importare';
-      alertImport.className = 'alert alert-error';
-      alertImport.classList.remove('hidden');
-      return;
-    }
-    
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      
-      if (!data.catalogo) {
-        throw new Error('File non valido: manca il catalogo DPI');
-      }
-      
-      const response = await API.post('/api/dpi/import', data);
-      if (response?.error) throw new Error(response.error);
-      alertImport.textContent = response.message;
-      alertImport.className = 'alert alert-success';
-      alertImport.classList.remove('hidden');
-      
-      fileInput.value = '';
-      await loadData();
-      refreshDpiSelect();
-      renderCatalogo();
-      
-      // Update select dropdown
-      const selectDpi = $('#select-dpi');
-      if (selectDpi) {
-        selectDpi.innerHTML = '<option value="">Seleziona DPI...</option>';
-        const byCategoria = {};
-        catalogo.forEach(d => {
-          if (!byCategoria[d.categoria]) byCategoria[d.categoria] = [];
-          byCategoria[d.categoria].push(d);
-        });
-        Object.entries(byCategoria).forEach(([cat, items]) => {
-          const optgroup = document.createElement('optgroup');
-          optgroup.label = cat;
-          items.forEach(d => {
-            const opt = document.createElement('option');
-            opt.value = d.id;
-            opt.textContent = d.nome;
-            opt.dataset.taglie = d.taglia_disponibili || 'Unica';
-            optgroup.appendChild(opt);
-          });
-          selectDpi.appendChild(optgroup);
-        });
-      }
-      
-      setTimeout(() => alertImport.classList.add('hidden'), 5000);
-    } catch (err) {
-      alertImport.textContent = 'Errore import: ' + (err?.message || err);
-      alertImport.className = 'alert alert-error';
-      alertImport.classList.remove('hidden');
-    }
-  };
+});
+
+// ============================================
+// Init
+// ============================================
+if (token && user) {
+  showDashboard();
+} else {
+  showLogin();
 }
