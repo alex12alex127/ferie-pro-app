@@ -677,28 +677,72 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // New Request Form
-document.getElementById('request-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
+document.addEventListener('DOMContentLoaded', () => {
+  const requestForm = document.getElementById('request-form');
+  const reqStart = document.getElementById('req-start');
+  const reqEnd = document.getElementById('req-end');
   
-  const type = document.getElementById('req-type').value;
-  const start_date = document.getElementById('req-start').value;
-  const end_date = document.getElementById('req-end').value;
-  const reason = document.getElementById('req-reason').value;
-  
-  try {
-    await api('/requests', {
-      method: 'POST',
-      body: JSON.stringify({ type, start_date, end_date, reason })
+  // Set minimum date to today
+  if (reqStart && reqEnd) {
+    const today = new Date().toISOString().split('T')[0];
+    reqStart.setAttribute('min', today);
+    reqEnd.setAttribute('min', today);
+    
+    // Update end date min when start date changes
+    reqStart.addEventListener('change', () => {
+      reqEnd.setAttribute('min', reqStart.value || today);
+      if (reqEnd.value && reqEnd.value < reqStart.value) {
+        reqEnd.value = reqStart.value;
+      }
     });
-    
-    alert('Richiesta inviata con successo!');
-    e.target.reset();
-    
-    // Reload stats and go to requests page
-    await loadStats();
-    document.querySelector('[data-page="requests"]')?.click();
-  } catch (e) {
-    alert(e.message);
+  }
+  
+  if (requestForm) {
+    requestForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const type = document.getElementById('req-type').value;
+      const start_date = document.getElementById('req-start').value;
+      const end_date = document.getElementById('req-end').value;
+      const reason = document.getElementById('req-reason').value;
+      
+      if (!start_date || !end_date) {
+        alert('Per favore, inserisci le date di inizio e fine');
+        return;
+      }
+      
+      // Validate dates
+      const startDate = new Date(start_date);
+      const endDate = new Date(end_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (startDate < today) {
+        alert('La data di inizio non può essere nel passato');
+        return;
+      }
+      
+      if (endDate < startDate) {
+        alert('La data di fine non può essere precedente alla data di inizio');
+        return;
+      }
+      
+      try {
+        const response = await api('/requests', {
+          method: 'POST',
+          body: JSON.stringify({ type, start_date, end_date, reason })
+        });
+        
+        alert(`Richiesta inviata con successo! Giorni richiesti: ${response.days}`);
+        requestForm.reset();
+        
+        // Reload stats and go to requests page
+        await loadStats();
+        document.querySelector('[data-page="requests"]')?.click();
+      } catch (e) {
+        alert(e.message);
+      }
+    });
   }
 });
 

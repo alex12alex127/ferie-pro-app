@@ -378,35 +378,55 @@ app.post('/api/requests', auth, (req, res) => {
   try {
     const { type, start_date, end_date, reason } = req.body;
     
+    console.log('📝 Nuova richiesta:', { type, start_date, end_date, user: req.user.username });
+    
     if (!start_date || !end_date) {
       return res.status(400).json({ error: 'Date mancanti' });
     }
     
+    // Validate date format
+    const startDate = new Date(start_date);
+    const endDate = new Date(end_date);
+    
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return res.status(400).json({ error: 'Formato date non valido' });
+    }
+    
+    if (endDate < startDate) {
+      return res.status(400).json({ error: 'La data di fine non può essere precedente alla data di inizio' });
+    }
+    
     const days = calcWorkDays(start_date, end_date);
+    
+    console.log('📊 Giorni calcolati:', days);
     
     // Verifica disponibilità giorni per ferie
     if (type === 'Ferie') {
       const user = db.prepare('SELECT total_days, used_days FROM users WHERE id = ?').get(req.user.id);
       const available = user.total_days - user.used_days;
       
+      console.log('💼 Giorni disponibili:', available, 'Richiesti:', days);
+      
       if (days > available) {
         return res.status(400).json({ error: `Giorni insufficienti. Disponibili: ${available}, Richiesti: ${days}` });
       }
     }
     
-    db.prepare('INSERT INTO requests (user_id, type, start_date, end_date, days, reason) VALUES (?, ?, ?, ?, ?, ?)')
+    const result = db.prepare('INSERT INTO requests (user_id, type, start_date, end_date, days, reason) VALUES (?, ?, ?, ?, ?, ?)')
       .run(req.user.id, type || 'Ferie', start_date, end_date, days, reason || '');
+    
+    console.log('✅ Richiesta creata con ID:', result.lastInsertRowid);
     
     // Notifica admin
     const admins = db.prepare('SELECT id FROM users WHERE role = "admin"').all();
     admins.forEach(admin => {
-      createNotification(admin.id, 'Nuova Richiesta', `Nuova richiesta di ${type} da approvare`, 'info');
+      createNotification(admin.id, 'Nuova Richiesta', `Nuova richiesta di ${type || 'Ferie'} da approvare`, 'info');
     });
     
     res.json({ message: 'Richiesta inviata', days });
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'Errore creazione richiesta' });
+    console.error('❌ Errore creazione richiesta:', e);
+    res.status(500).json({ error: 'Errore creazione richiesta: ' + e.message });
   }
 });
 
