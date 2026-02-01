@@ -33,175 +33,120 @@
       <header class="topbar">
         <button class="menu-toggle" onclick="toggleMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg></button>
         <div class="topbar-left">
-          <h2 id="greeting">Buongiorno</h2>
-          <p>La tua area personale</p>
+          <h2 id="greeting">Dashboard</h2>
+          <p id="days-info">Gestione ferie e attività</p>
         </div>
         <div></div>
       </header>
       
-      <div class="container dashboard-modern">
-        <!-- Avvisi -->
-        <div id="avvisi-section" class="hidden dashboard-avvisi">
-          <div class="card card-avvisi">
-            <div class="card-header-row">
-              <h3>Avvisi recenti</h3>
-              <button class="btn-ghost btn-sm" id="btn-toggle-avvisi">Nascondi</button>
-            </div>
-            <div id="avvisi-list"></div>
+      <div class="container">
+        <!-- Statistiche rapide -->
+        <div class="stats-grid">
+          <div class="stat-widget">
+            <h3 id="total-days">26</h3>
+            <p>Giorni totali</p>
+          </div>
+          <div class="stat-widget" style="background:linear-gradient(135deg, #10b981, #059669)">
+            <h3 id="remaining-days">20</h3>
+            <p>Giorni rimanenti</p>
+          </div>
+          <div class="stat-widget" style="background:linear-gradient(135deg, #ef4444, #dc2626)">
+            <h3 id="used-days">6</h3>
+            <p>Giorni utilizzati</p>
+          </div>
+          <div class="stat-widget" style="background:linear-gradient(135deg, #f59e0b, #d97706)">
+            <h3 id="pending-requests">2</h3>
+            <p>Rich. in attesa</p>
           </div>
         </div>
 
-        <!-- Hero: Welcome + Meteo -->
-        <div class="dashboard-hero">
-          <div class="dashboard-hero-left">
-            <div class="avatar-picker-preview" id="profile-avatar" onclick="changeAvatar()" title="Clicca per cambiare icona">
-              <span id="avatar-icon-wrap"></span>
-            </div>
-            <div class="dashboard-hero-info">
-              <h1 id="profile-name" class="dashboard-hero-name"></h1>
-              <span id="sede-badge" class="badge badge-pending sede-badge"></span>
-              <p id="days-info" class="dashboard-days-text"></p>
-            </div>
-          </div>
-          <div class="dashboard-hero-weather card" id="weather-card">
-            <div id="weather-icon" class="weather-icon">⛅</div>
-            <div class="weather-details">
-              <span id="weather-temp" class="weather-temp">--°C</span>
-              <span id="weather-desc" class="weather-desc">Caricamento...</span>
-              <span id="weather-city" class="weather-city"></span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Ferie: grafico a torta (fette) -->
-        <section class="dashboard-section dashboard-ferie">
-          <div class="card card-pie">
-            <h3 class="section-title">Le tue ferie</h3>
-            <div class="pie-chart-modern">
-              <div class="pie-chart-main">
-                <canvas id="ferie-pie-chart" width="200" height="200"></canvas>
-                <div class="pie-center-label">
-                  <span id="pie-center-num">0</span>
-                  <span class="pie-center-unit">giorni</span>
+        <div class="grid grid-2">
+          <!-- Sezione ferie rapide -->
+          <div class="card">
+            <h3>Azioni Rapide</h3>
+            <div class="grid grid-2" style="gap:12px;margin-top:16px">
+              <div class="quick-action-card" onclick="window.location.href='/request.html'">
+                <div style="padding:16px;text-align:center">
+                  <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor" style="color:var(--primary)">
+                    <path d="M20 12V6.5a2.5 2.5 0 0 0-5 0V12H8V6.5A2.5 2.5 0 1 0 3 6.5V12c0 5 4 9 9 9s9-4 9-9z"/>
+                  </svg>
+                  <p style="margin-top:8px;font-weight:600">Richiedi Ferie</p>
                 </div>
               </div>
-              <div class="pie-legend">
-                <div class="pie-legend-item pie-remaining">
-                  <span class="pie-dot"></span>
-                  <span>Rimanenti: <strong id="remaining-days">0</strong></span>
-                </div>
-                <div class="pie-legend-item pie-used">
-                  <span class="pie-dot"></span>
-                  <span>Usati: <strong id="used-days">0</strong></span>
-                </div>
-                <div class="pie-legend-item pie-total">
-                  <span class="pie-dot"></span>
-                  <span>Totale: <strong id="total-days">0</strong></span>
+              <div class="quick-action-card" onclick="window.location.href='/calendar.html'">
+                <div style="padding:16px;text-align:center">
+                  <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor" style="color:var(--success)">
+                    <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/>
+                  </svg>
+                  <p style="margin-top:8px;font-weight:600">Calendario</p>
                 </div>
               </div>
             </div>
           </div>
-        </section>
 
-        <!-- Manager: Panoramica a torta + KPIs -->
-        <div id="manager-section" class="hidden">
-          <section class="dashboard-section dashboard-team">
-            <div class="card card-pie card-pie-team">
-              <h3 class="section-title">Panoramica richieste</h3>
-              <p class="section-sub">Riepilogo ferie del team</p>
-              <div class="pie-chart-modern pie-team">
-                <div class="pie-chart-main">
-                  <canvas id="requests-pie-chart" width="180" height="180"></canvas>
-                  <div class="pie-center-label pie-center-small">
-                    <span id="requests-pie-total">0</span>
-                    <span class="pie-center-unit">totali</span>
-                  </div>
-                </div>
-                <div class="pie-legend pie-legend-team">
-                  <div class="pie-legend-item pie-pending"><span class="pie-dot"></span><span>In attesa: <strong id="kpi-pending">0</strong></span></div>
-                  <div class="pie-legend-item pie-approved"><span class="pie-dot"></span><span>Approvate: <strong id="kpi-approved">0</strong></span></div>
-                  <div class="pie-legend-item pie-rejected"><span class="pie-dot"></span><span>Rifiutate: <strong id="kpi-rejected">0</strong></span></div>
-                  <div class="pie-legend-item pie-month"><span class="pie-dot"></span><span>Questo mese: <strong id="kpi-month">0</strong></span></div>
-                </div>
+          <!-- Grafico ferie -->
+          <div class="card">
+            <h3>Stato Ferie</h3>
+            <div style="display:flex;align-items:center;justify-content:center;margin:20px 0">
+              <canvas id="ferie-pie-chart" width="200" height="200"></canvas>
+              <div id="pie-center-num" style="position:absolute;font-size:32px;font-weight:700;color:var(--text)"></div>
+            </div>
+            <div style="display:flex;justify-content:space-around;text-align:center;margin-top:16px">
+              <div>
+                <div style="background:var(--success);width:12px;height:12px;border-radius:50%;margin:0 auto"></div>
+                <small style="color:var(--text-secondary)">Rimanenti</small>
               </div>
-            </div>
-          </section>
-
-          <div class="card card-requests">
-            <h3>Gestione richieste</h3>
-            <div class="filters">
-              <div class="form-group"><label>Cerca</label><input type="text" id="filter-text" placeholder="Nome, email..."></div>
-              <div class="form-group"><label>Stato</label>
-                <select id="filter-status">
-                  <option value="">Tutti</option>
-                  <option>In attesa</option>
-                  <option>Approvata</option>
-                  <option>Rifiutata</option>
-                </select>
+              <div>
+                <div style="background:var(--danger);width:12px;height:12px;border-radius:50%;margin:0 auto"></div>
+                <small style="color:var(--text-secondary)">Utilizzati</small>
               </div>
-              <div class="form-group"><label>Da</label><input type="date" id="filter-from"></div>
-              <div class="form-group"><label>A</label><input type="date" id="filter-to"></div>
-            </div>
-            <div class="toolbar">
-              <button id="btn-refresh" class="btn-secondary btn-sm">Aggiorna</button>
-              <button class="btn-ghost btn-sm" onclick="exportData('csv')">CSV</button>
-              <button class="btn-ghost btn-sm" onclick="exportData('json')">JSON</button>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Dipendente</th>
-                    <th class="hide-mobile">Protocollo</th>
-                    <th>Periodo</th>
-                    <th>Giorni</th>
-                    <th>Stato</th>
-                    <th>Azioni</th>
-                  </tr>
-                </thead>
-                <tbody id="requests-list"></tbody>
-              </table>
             </div>
           </div>
         </div>
 
-        <!-- Pubblica avviso (solo manager/admin) -->
+        <!-- Timeline richieste -->
+        <div class="card">
+          <h3>Ultime Richieste</h3>
+          <div id="requests-timeline" class="ferie-timeline">
+            <div class="loading-spinner" style="margin:20px auto"></div>
+          </div>
+        </div>
+
+        <!-- Avvisi (mantenuto per compatibilità) -->
+        <div id="avvisi-section" class="hidden">
+          <div class="card">
+            <h3>Ultimi Avvisi <button id="btn-toggle-avvisi" class="btn-ghost btn-sm" style="float:right">Nascondi</button></h3>
+            <div id="avvisi-list" style="max-height:200px;overflow-y:auto"></div>
+          </div>
+        </div>
+
+        <!-- Form avvisi (solo manager/admin) -->
         <div id="avviso-form-section" class="hidden">
           <div class="card">
-            <h3>Pubblica avviso</h3>
-            <div id="avviso-alert" class="alert hidden"></div>
+            <h3>Pubblica Avviso</h3>
             <form id="avviso-form">
               <div class="row row-2">
-                <div class="form-group"><label>Titolo</label><input type="text" name="titolo" required placeholder="Titolo avviso"></div>
-                <div class="form-group"><label>Priorità</label>
-                  <select name="priorita">
+                <div class="form-group">
+                  <label>Titolo</label>
+                  <input type="text" id="avviso-titolo" placeholder="Titolo avviso">
+                </div>
+                <div class="form-group">
+                  <label>Priorità</label>
+                  <select id="avviso-priorita">
                     <option value="Normale">Normale</option>
                     <option value="Alta">Alta</option>
                     <option value="Urgente">Urgente</option>
                   </select>
                 </div>
               </div>
-              <div class="form-group"><label>Messaggio</label><textarea name="messaggio" required placeholder="Contenuto..." style="min-height:60px"></textarea></div>
-              <button type="submit" class="btn-sm">Pubblica</button>
+              <div class="form-group">
+                <label>Messaggio</label>
+                <textarea id="avviso-messaggio" placeholder="Messaggio dell'avviso"></textarea>
+              </div>
+              <button type="submit" class="btn-primary">Pubblica</button>
+              <div id="avviso-alert" class="alert hidden"></div>
             </form>
           </div>
-        </div>
-
-        <!-- Modifica profilo -->
-        <div class="card card-profile">
-          <h3>Modifica profilo</h3>
-          <div id="profile-alert" class="alert hidden"></div>
-          <form id="profile-form">
-            <div class="row row-2">
-              <div class="form-group"><label>Nome</label><input type="text" name="name" required></div>
-              <div class="form-group"><label>Email</label><input type="email" name="email" readonly></div>
-            </div>
-            <div class="row row-2">
-              <div class="form-group"><label>Telefono</label><input type="tel" name="phone" placeholder="Telefono"></div>
-              <div class="form-group"><label>Reparto</label><input type="text" name="department" placeholder="Reparto"></div>
-            </div>
-            <button type="submit">Salva modifiche</button>
-          </form>
         </div>
       </div>
     </main>
@@ -209,6 +154,76 @@
   
   <script src="/js/auth.js"></script>
   <script src="/js/app.js"></script>
-  <script>initDashboard();</script>
+  <script>
+    // Script specifico per la dashboard
+    async function loadDashboardData() {
+      const user = Auth.getUser();
+      if (!user) return;
+
+      try {
+        // Carica profilo e statistiche
+        const profile = await API.get('/api/profile');
+        const totalDays = profile.total_days || 26;
+        const usedDays = profile.used_days || 0;
+        const remainingDays = Math.max(0, totalDays - usedDays);
+
+        // Aggiorna statistiche
+        $('#total-days').textContent = totalDays;
+        $('#remaining-days').textContent = remainingDays;
+        $('#used-days').textContent = usedDays;
+
+        // Aggiorna grafico
+        createFeriePieChart(totalDays, usedDays);
+
+        // Carica richieste per timeline
+        const requests = await API.get('/api/requests') || [];
+        renderRequestsTimeline(requests.slice(0, 5));
+
+        // Statistiche per manager
+        if (['manager', 'admin'].includes(user.role)) {
+          try {
+            const stats = await API.get('/api/stats');
+            $('#pending-requests').textContent = stats.pending || 0;
+          } catch { /* Ignora se non autorizzato */ }
+        } else {
+          $('#pending-requests').textContent = requests.filter(r => r.stato === 'In attesa').length;
+        }
+      } catch (error) {
+        console.error('Errore caricamento dashboard:', error);
+      }
+    }
+
+    function renderRequestsTimeline(requests) {
+      const timeline = $('#requests-timeline');
+      if (!requests.length) {
+        timeline.innerHTML = '<p style="text-align:center;color:var(--text-muted)">Nessuna richiesta recente</p>';
+        return;
+      }
+
+      timeline.innerHTML = requests.map(r => `
+        <div class="ferie-timeline-item">
+          <div class="ferie-timeline-date">${new Date(r.inizio).toLocaleDateString('it-IT')}</div>
+          <div class="ferie-timeline-content">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+              <strong>${r.tipo}</strong>
+              <span class="ferie-badge ${r.stato.toLowerCase()}">• ${r.stato}</span>
+            </div>
+            <div style="color:var(--text-secondary);font-size:12px">
+              ${r.giorni} giorni - ${r.urgenza}
+            </div>
+            ${r.motivo ? `<div style="color:var(--text-muted);font-size:12px;margin-top:4px">${escapeHtml(r.motivo)}</div>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initDashboard();
+      loadDashboardData();
+    });
+
+    // Refresh automatico ogni 30 secondi
+    setInterval(loadDashboardData, 30000);
+  </script>
 </body>
 </html>

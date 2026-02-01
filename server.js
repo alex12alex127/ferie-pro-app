@@ -66,24 +66,6 @@ function initDb() {
       read INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
-    CREATE TABLE IF NOT EXISTS cantieri (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      nome TEXT NOT NULL,
-      cliente TEXT NOT NULL,
-      indirizzo TEXT,
-      stato TEXT DEFAULT 'Attivo',
-      data_inizio TEXT,
-      data_fine TEXT,
-      note TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE TABLE IF NOT EXISTS cantieri_assegnazioni (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      cantiere_id INTEGER NOT NULL,
-      user_id INTEGER NOT NULL,
-      ruolo TEXT DEFAULT 'Tecnico',
-      UNIQUE(cantiere_id, user_id)
-    );
     CREATE TABLE IF NOT EXISTS avvisi (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       titolo TEXT NOT NULL,
@@ -98,29 +80,6 @@ function initDb() {
       indirizzo TEXT,
       attiva INTEGER DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE TABLE IF NOT EXISTS dpi_catalogo (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      nome TEXT NOT NULL,
-      categoria TEXT NOT NULL,
-      descrizione TEXT,
-      taglia_disponibili TEXT,
-      codice_barre TEXT DEFAULT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE TABLE IF NOT EXISTS dpi_assegnazioni (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      dpi_id INTEGER NOT NULL,
-      taglia TEXT,
-      quantita INTEGER DEFAULT 1,
-      data_consegna DATE NOT NULL,
-      data_scadenza DATE,
-      note TEXT,
-      stato TEXT DEFAULT 'attivo',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users(id),
-      FOREIGN KEY (dpi_id) REFERENCES dpi_catalogo(id)
     );
   `;
   db.exec(schema);
@@ -322,39 +281,6 @@ app.delete('/api/users/:id', auth, isAdmin, (req, res) => {
   res.json({ message: 'Utente eliminato' });
 });
 
-// Cantieri
-app.get('/api/cantieri', auth, (req, res) => {
-  const cantieri = db.prepare('SELECT * FROM cantieri ORDER BY created_at DESC').all();
-  cantieri.forEach(c => c.tecnici = db.prepare('SELECT u.id, u.name FROM cantieri_assegnazioni ca JOIN users u ON ca.user_id = u.id WHERE ca.cantiere_id = ?').all(c.id));
-  res.json(cantieri);
-});
-app.post('/api/cantieri', auth, isManager, (req, res) => {
-  const { nome, cliente, indirizzo, data_inizio, data_fine, note } = req.body;
-  const r = db.prepare('INSERT INTO cantieri (nome, cliente, indirizzo, data_inizio, data_fine, note) VALUES (?,?,?,?,?,?)').run(nome, cliente, indirizzo, data_inizio, data_fine, note);
-  res.json({ id: r.lastInsertRowid, message: 'Cantiere creato' });
-});
-app.patch('/api/cantieri/:id', auth, isManager, (req, res) => {
-  const { nome, cliente, indirizzo, stato, data_inizio, data_fine, note } = req.body;
-  db.prepare('UPDATE cantieri SET nome=COALESCE(?,nome), cliente=COALESCE(?,cliente), indirizzo=COALESCE(?,indirizzo), stato=COALESCE(?,stato), data_inizio=COALESCE(?,data_inizio), data_fine=COALESCE(?,data_fine), note=COALESCE(?,note) WHERE id=?').run(nome, cliente, indirizzo, stato, data_inizio, data_fine, note, req.params.id);
-  res.json({ message: 'Cantiere aggiornato' });
-});
-app.post('/api/cantieri/:id/assegna', auth, isManager, (req, res) => {
-  try { db.prepare('INSERT INTO cantieri_assegnazioni (cantiere_id, user_id) VALUES (?,?)').run(req.params.id, req.body.user_id); res.json({ message: 'Tecnico assegnato' }); } 
-  catch { res.status(400).json({ error: 'Già assegnato' }); }
-});
-app.delete('/api/cantieri/:id/assegna/:userId', auth, isManager, (req, res) => {
-  db.prepare('DELETE FROM cantieri_assegnazioni WHERE cantiere_id = ? AND user_id = ?').run(req.params.id, req.params.userId);
-  res.json({ message: 'Assegnazione rimossa' });
-});
-
-// DPI
-app.get('/api/dpi/catalogo', auth, (req, res) => res.json(db.prepare('SELECT * FROM dpi_catalogo ORDER BY categoria, nome').all()));
-app.get('/api/dpi/assegnazioni', auth, (req, res) => {
-  const sql = req.user.role === 'employee' 
-    ? `SELECT a.*, d.nome as dpi_nome, d.categoria, u.name as dipendente_nome FROM dpi_assegnazioni a JOIN dpi_catalogo d ON a.dpi_id = d.id JOIN users u ON a.user_id = u.id WHERE a.user_id = ? ORDER BY a.data_consegna DESC`
-    : `SELECT a.*, d.nome as dpi_nome, d.categoria, u.name as dipendente_nome FROM dpi_assegnazioni a JOIN dpi_catalogo d ON a.dpi_id = d.id JOIN users u ON a.user_id = u.id ORDER BY a.data_consegna DESC`;
-  res.json(db.prepare(sql).all(req.user.role === 'employee' ? req.user.id : undefined));
-});
 
 // Calendar
 app.get('/api/calendar', auth, (req, res) => {

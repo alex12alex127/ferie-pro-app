@@ -98,6 +98,20 @@
               
               <!-- Numero Protocollo (visibile solo se tipo = Malattia) -->
               <div id="malattia-section" class="hidden">
+                <div class="form-group">
+                  <label>Numero Protocollo *</label>
+                  <input type="text" id="codice-malattia" name="codice_malattia" placeholder="Inserisci il numero di protocollo">
+                </div>
+              </div>
+
+              <div class="form-footer">
+                <button type="submit" class="btn-primary" style="width:100%">
+                  <span style="display:flex;align-items:center;gap:8px">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                    Invia Richiesta
+                  </span>
+                </button>
+              </div>
                 <div class="form-group" style="background:var(--warning-bg);padding:16px;border-radius:var(--radius-sm);border:1px solid var(--warning)">
                   <label style="color:var(--warning)">Numero di Protocollo</label>
                   <input type="text" name="codice_malattia" id="codice-malattia" placeholder="Inserisci il numero di protocollo">

@@ -279,10 +279,6 @@ function renderNav(active, hasNotifications = false) {
       { k: 'request', l: 'Richiedi Ferie', h: '/request.html', i: 'plane' },
       { k: 'calendar', l: 'Calendario', h: '/calendar.html', i: 'calendar' },
     ]},
-    { title: 'Operativo', items: [
-      { k: 'cantieri', l: 'Cantieri', h: '/cantieri.html', i: 'building', m: true },
-      { k: 'dpi', l: 'DPI', h: '/dpi.html', i: 'shield' },
-    ]},
     { title: 'Account', items: [
       { k: 'settings', l: 'Impostazioni', h: '/settings.html', i: 'user' },
       { k: 'admin', l: 'Admin', h: '/admin.html', i: 'settings', a: true },
@@ -494,15 +490,29 @@ async function initDashboard() {
   
   // Carica profilo e giorni ferie
   const profile = await API.get('/api/profile');
-  const rem = Math.max(0, (profile.total_days || 0) - (profile.used_days || 0));
-  const el = $('#days-info');
-  if (el) el.innerHTML = `<b>${rem}</b> giorni rimanenti su ${profile.total_days || 0}`;
+  const totalDays = profile.total_days || 26;
+  const usedDays = profile.used_days || 0;
+  const remainingDays = Math.max(0, totalDays - usedDays);
+  
+  const daysInfo = $('#days-info');
+  if (daysInfo) daysInfo.innerHTML = `<b>${remainingDays}</b> giorni rimanenti su ${totalDays}`;
+  
+  // Aggiorna statistiche dashboard se necessario
+  if (window.loadDashboardData) {
+    window.loadDashboardData();
+  }
   const sb = $('#sede-badge');
   if (sb) sb.textContent = profile.sede_nome ? `📍 ${profile.sede_nome}` : 'Sede non assegnata';
   const pn = $('#profile-name');
   if (pn) pn.textContent = profile.name;
   
   createFeriePieChart(profile.total_days || 0, profile.used_days || 0);
+
+  // Timeline richieste per dashboard
+  if (window.renderRequestsTimeline) {
+    const requests = await API.get('/api/requests') || [];
+    window.renderRequestsTimeline(requests.slice(0, 5));
+  }
   
   // Avatar icona (tema elettricista)
   const avatarKey = (profile.avatar && avatarIcons[profile.avatar]) ? profile.avatar : avatarIconKeys[0];
