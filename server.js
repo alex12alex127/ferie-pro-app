@@ -418,10 +418,15 @@ app.post('/api/requests', auth, (req, res) => {
     console.log('✅ Richiesta creata con ID:', result.lastInsertRowid);
     
     // Notifica admin
-    const admins = db.prepare('SELECT id FROM users WHERE role = "admin"').all();
-    admins.forEach(admin => {
-      createNotification(admin.id, 'Nuova Richiesta', `Nuova richiesta di ${type || 'Ferie'} da approvare`, 'info');
-    });
+    try {
+      const admins = db.prepare('SELECT id FROM users WHERE role = ?').all('admin');
+      admins.forEach(admin => {
+        createNotification(admin.id, 'Nuova Richiesta', `Nuova richiesta di ${type || 'Ferie'} da approvare`, 'info');
+      });
+    } catch (notifError) {
+      console.error('⚠️ Errore invio notifiche admin:', notifError);
+      // Non bloccare la richiesta se le notifiche falliscono
+    }
     
     res.json({ message: 'Richiesta inviata', days });
   } catch (e) {
